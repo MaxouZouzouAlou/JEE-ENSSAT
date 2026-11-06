@@ -52,6 +52,8 @@ public class Main {
         final ResourceConfig rc = new ResourceConfig();
 
         rc.register(BookController.class);
+        // Ressources du studio photo : toutes les classes @Path du package sont enregistrées
+        rc.packages("fr.enssat.studiophoto.resource");
 
         HttpServer httpServer = GrizzlyHttpServerFactory.createHttpServer(URI.create(apiUri), rc);
 
