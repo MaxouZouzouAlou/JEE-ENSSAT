@@ -1,4 +1,4 @@
-package org.tutorial;
+package fr.enssat.studiophoto;
 
 import java.sql.*;
 import java.util.Enumeration;

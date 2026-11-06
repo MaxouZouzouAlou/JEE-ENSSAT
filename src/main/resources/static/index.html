@@ -1,68 +1,45 @@
-<html>
+<!DOCTYPE html>
+<html lang="fr">
 <head>
-    <meta http-equiv="Cache-Control" content="no-cache" />
-    <style>
-        table, th, td {
-            border: 1px solid;
-            padding:5px;
-        }
-        table {
-            border-collapse: collapse;
-        }
-        div {
-            margin-top: 10px;}
-    </style>
-    <script>
-        function loadBooks(url) {
-            fetch(url)
-                .then(response => response.json())
-                .then(response => process(response))
-                .catch(error => alert("Erreur : " + error));
-        }
-        function process(books) {
-            var booklist = document.getElementById("booklist");
-            if (booklist.hasChildNodes()) {
-                booklist.removeChild(booklist.firstChild);
-            }
-            var table = document.createElement("table");
-            booklist.appendChild(table);
-
-            for (var book of books) {
-                var tr = document.createElement("tr");
-                var td_id = document.createElement("td");
-                td_id.append(book.id);
-                var td_title = document.createElement("td");
-                td_title.append(book.title);
-                var td_author = document.createElement("td");
-                td_author.append(book.author);
-                tr.appendChild(td_id);
-                tr.appendChild(td_title);
-                tr.appendChild(td_author);
-                table.appendChild(tr);
-            }
-        }
-
-        function searchByTitle() {
-            var title = document.getElementById("title").value;
-            var url ="/api/books?title="+title;
-            loadBooks(url);
-        }
-        document.addEventListener('DOMContentLoaded', () => {
-            loadBooks('/api/books');
-        });
-    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-cache">
+    <title>Accueil – Studio photo</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
 </head>
 <body>
+<header id="entete"></header>
 
-<h1>Biblioth&egrave;que</h1>
+<main>
+    <div id="messages"></div>
 
-<div id="booklist"></div>
+    <h1>Studio photo</h1>
+    <p>Gestion des photographes, des clients, des séances et de la facturation.</p>
 
-<div>
-    <form>
-        <input type="text" id="title">
-        <button onclick="searchByTitle()">Chercher</button>
-    </form>
-</div>
+    <div class="grille">
+        <a class="carte" href="photographes.html">
+            <h2>Photographes</h2>
+            <p>Liste des photographes, spécialités, activation et désactivation.</p>
+        </a>
+        <a class="carte" href="clients.html">
+            <h2>Clients</h2>
+            <p>Clients particuliers et entreprises.</p>
+        </a>
+        <a class="carte" href="seances.html">
+            <h2>Séances</h2>
+            <p>Planning des séances, création, modification et changement de statut.</p>
+        </a>
+        <a class="carte" href="factures.html">
+            <h2>Factures</h2>
+            <p>Factures générées, statut de paiement et téléchargement PDF.</p>
+        </a>
+        <a class="carte" href="statistiques.html">
+            <h2>Statistiques</h2>
+            <p>Top 5 des photographes et chiffre d’affaires sur une période.</p>
+        </a>
+    </div>
+</main>
 </body>
 </html>
