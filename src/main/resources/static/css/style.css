@@ -1,0 +1,188 @@
+/* =====================================================================
+   Studio photo - style commun
+
+   Pour une nouvelle page : inclure ce fichier, et le HTML standard
+   (h1, p, table, form, label, input, select, button) est déjà mis en forme.
+   Seules quelques classes existent :
+
+     .carte                 encadré blanc (bloc, formulaire, carte cliquable)
+     .grille                cartes côte à côte
+     .actions               rangée de boutons
+     button.secondaire      bouton blanc
+     button.danger          bouton rouge (supprimer, annuler)
+     .badge + STATUT        pastille de couleur, ex. class="badge PAYEE"
+     .message.erreur/.succes  messages (créés par api.js)
+   ===================================================================== */
+
+:root {
+    --principale: #1f5f8b;
+    --bordure: #d9dee5;
+    --texte-doux: #616e7c;
+    --vert: #2f7d4f;
+    --orange: #a8641a;
+    --rouge: #b23b3b;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    color: #1f2933;
+    background: #f6f7f9;
+}
+
+/* ---------- En-tête et menu (remplis par layout.js) ---------- */
+
+header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    background: var(--principale);
+}
+
+header a {
+    color: #fff;
+    text-decoration: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+}
+
+header a:hover,
+header a.actif {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* ---------- Contenu ---------- */
+
+main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px;
+}
+
+h1 {
+    margin: 0 0 8px;
+}
+
+.carte {
+    display: block;
+    background: #fff;
+    border: 1px solid var(--bordure);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 16px;
+    color: inherit;
+    text-decoration: none;
+}
+
+.carte h2 {
+    margin-top: 0;
+}
+
+.grille {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+}
+
+.grille .carte {
+    margin-bottom: 0;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+/* ---------- Tableaux ---------- */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border: 1px solid var(--bordure);
+}
+
+th, td {
+    text-align: left;
+    padding: 10px;
+    border-bottom: 1px solid var(--bordure);
+}
+
+th {
+    background: #eef1f5;
+}
+
+/* ---------- Formulaires et boutons ---------- */
+
+label {
+    display: block;
+    margin: 12px 0 4px;
+    font-weight: 600;
+}
+
+input, select, textarea, button {
+    font: inherit;
+    padding: 8px 10px;
+    border: 1px solid var(--bordure);
+    border-radius: 6px;
+}
+
+button {
+    border-color: var(--principale);
+    background: var(--principale);
+    color: #fff;
+    cursor: pointer;
+}
+
+button.secondaire {
+    background: #fff;
+    color: var(--principale);
+}
+
+button.danger {
+    border-color: var(--rouge);
+    background: var(--rouge);
+}
+
+button:disabled {
+    opacity: 0.5;
+}
+
+/* ---------- Badges de statut ---------- */
+
+.badge {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 13px;
+    background: #eef1f5;
+    color: var(--texte-doux);
+}
+
+.badge.PLANIFIEE, .badge.CONFIRMEE        { background: #e6eef6; color: var(--principale); }
+.badge.TERMINEE, .badge.PAYEE, .badge.ACTIF { background: #e5f3ea; color: var(--vert); }
+.badge.EN_ATTENTE                         { background: #fbf0e1; color: var(--orange); }
+.badge.ANNULEE                            { background: #f6e6e6; color: var(--rouge); }
+
+/* ---------- Messages (créés par api.js) ---------- */
+
+.message {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+}
+
+.message.erreur { background: #fbeeee; color: var(--rouge); }
+.message.succes { background: #ebf6ef; color: var(--vert); }
+
+.message button {
+    background: none;
+    border: none;
+    color: inherit;
+    padding: 0 4px;
+}

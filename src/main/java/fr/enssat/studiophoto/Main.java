@@ -1,4 +1,4 @@
-package org.tutorial;
+package fr.enssat.studiophoto;
 
 import org.glassfish.grizzly.http.server.CLStaticHttpHandler;
 import org.glassfish.grizzly.http.server.HttpServer;
@@ -51,7 +51,6 @@ public class Main {
 
         final ResourceConfig rc = new ResourceConfig();
 
-        rc.register(BookController.class);
         // Ressources du studio photo : toutes les classes @Path du package sont enregistrées
         rc.packages("fr.enssat.studiophoto.resource");
 

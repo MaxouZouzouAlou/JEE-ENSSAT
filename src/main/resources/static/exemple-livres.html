@@ -1,0 +1,68 @@
+<html>
+<head>
+    <meta http-equiv="Cache-Control" content="no-cache" />
+    <style>
+        table, th, td {
+            border: 1px solid;
+            padding:5px;
+        }
+        table {
+            border-collapse: collapse;
+        }
+        div {
+            margin-top: 10px;}
+    </style>
+    <script>
+        function loadBooks(url) {
+            fetch(url)
+                .then(response => response.json())
+                .then(response => process(response))
+                .catch(error => alert("Erreur : " + error));
+        }
+        function process(books) {
+            var booklist = document.getElementById("booklist");
+            if (booklist.hasChildNodes()) {
+                booklist.removeChild(booklist.firstChild);
+            }
+            var table = document.createElement("table");
+            booklist.appendChild(table);
+
+            for (var book of books) {
+                var tr = document.createElement("tr");
+                var td_id = document.createElement("td");
+                td_id.append(book.id);
+                var td_title = document.createElement("td");
+                td_title.append(book.title);
+                var td_author = document.createElement("td");
+                td_author.append(book.author);
+                tr.appendChild(td_id);
+                tr.appendChild(td_title);
+                tr.appendChild(td_author);
+                table.appendChild(tr);
+            }
+        }
+
+        function searchByTitle() {
+            var title = document.getElementById("title").value;
+            var url ="/api/books?title="+title;
+            loadBooks(url);
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            loadBooks('/api/books');
+        });
+    </script>
+</head>
+<body>
+
+<h1>Biblioth&egrave;que</h1>
+
+<div id="booklist"></div>
+
+<div>
+    <form>
+        <input type="text" id="title">
+        <button onclick="searchByTitle()">Chercher</button>
+    </form>
+</div>
+</body>
+</html>

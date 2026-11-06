@@ -62,7 +62,7 @@
                 <version>3.6.4</version>
                 <configuration>
                     <!-- Replace with your actual package structure if different -->
-                    <mainClass>org.tutorial.Main</mainClass>
+                    <mainClass>fr.enssat.studiophoto.Main</mainClass>
                 </configuration>
             </plugin>
         </plugins>
