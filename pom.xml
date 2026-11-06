@@ -13,6 +13,8 @@
         <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jersey.version>4.0.2</jersey.version>
+        <junit.version>5.13.4</junit.version>
+        <mockito.version>5.20.0</mockito.version>
     </properties>
 
     <dependencies>
@@ -44,6 +46,20 @@
             <version>26.7.0</version>
             <scope>compile</scope>
         </dependency>
+
+        <!-- tests -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -53,6 +69,16 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.16.0</version>
+            </plugin>
+
+            <!-- surefire pour "mvn test" ; le flag est là pour que mockito marche sur le JDK 25 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.4</version>
+                <configuration>
+                    <argLine>-XX:+EnableDynamicAgentLoading</argLine>
+                </configuration>
             </plugin>
 
             <!-- Exec Plugin: Allows you to run the app using "mvn exec:java" -->
