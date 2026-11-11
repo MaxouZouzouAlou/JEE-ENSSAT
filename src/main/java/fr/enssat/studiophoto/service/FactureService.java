@@ -4,6 +4,8 @@ import fr.enssat.studiophoto.dao.FactureDAO;
 import fr.enssat.studiophoto.dao.FactureDAOImpl;
 import fr.enssat.studiophoto.exception.ConflitException;
 import fr.enssat.studiophoto.exception.IntrouvableException;
+import fr.enssat.studiophoto.model.Client;
+import fr.enssat.studiophoto.model.ClientEntreprise;
 import fr.enssat.studiophoto.model.Facture;
 import fr.enssat.studiophoto.model.Seance;
 import fr.enssat.studiophoto.model.StatutPaiement;
@@ -12,7 +14,7 @@ import fr.enssat.studiophoto.model.StatutSeance;
 import java.time.Clock;
 import java.time.LocalDate;
 
-/** logique métier des factures : génération, numérotation */
+/** logique métier des factures : génération, numérotation, copie des infos client */
 public class FactureService {
 
     // nb de tentatives si 2 générations simultannées veulent le même numéro
@@ -58,7 +60,29 @@ public class FactureService {
         facture.setMontantHT(montants.ht());
         facture.setTauxTVA(montants.tauxTva());
         facture.setMontantTTC(montants.ttc());
+        figer(facture, seance);
         return enregistrer(facture);
+    }
+
+    /**
+     * copie les infos client + prestation dans la facture, pour qu'elle ne bouge plus
+     * si le client / le type / le photographe sont modifiés après.
+     */
+    private void figer(Facture facture, Seance seance) {
+        Client client = seance.getClient();
+        facture.setClientDesignation(client.designation());
+        facture.setClientAdresse(client.getAdressePostale());
+        facture.setClientEmail(client.getEmail());
+        // SIREN/TVA seulement pour une entreprise (NULL sinon)
+        if (client instanceof ClientEntreprise entreprise) {
+            facture.setClientSirenTva(entreprise.getSirenTva());
+        }
+
+        facture.setPrestationDate(seance.getDate());
+        facture.setPrestationHeure(seance.getHeureDebut());
+        facture.setPrestationDuree(seance.getDuree());
+        facture.setPrestationType(seance.getTypeSeance().getLibelle());
+        facture.setPhotographeNom(seance.getPhotographe().getNom());
     }
 
     // calcule le numéro puis insère. Si 2 générations prennent le même numéro, l'UNIQUE en base
