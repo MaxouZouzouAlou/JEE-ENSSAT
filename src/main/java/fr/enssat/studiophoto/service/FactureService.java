@@ -12,8 +12,13 @@ import fr.enssat.studiophoto.model.StatutSeance;
 import java.time.Clock;
 import java.time.LocalDate;
 
-/** logique métier des factures : génération */
+/** logique métier des factures : génération, numérotation */
 public class FactureService {
+
+    // nb de tentatives si 2 générations simultannées veulent le même numéro
+    private static final int MAX_ESSAIS_NUMERO = 3;
+    // numéros sur 4 chiffres, donc 9999 factures max par an
+    private static final int MAX_NUMERO_ANNUEL = 9999;
 
     private final FactureDAO factureDAO;
     private final Clock horloge;
@@ -53,6 +58,35 @@ public class FactureService {
         facture.setMontantHT(montants.ht());
         facture.setTauxTVA(montants.tauxTva());
         facture.setMontantTTC(montants.ttc());
-        return factureDAO.create(facture);
+        return enregistrer(facture);
+    }
+
+    // calcule le numéro puis insère. Si 2 générations prennent le même numéro, l'UNIQUE en base
+    // refuse la 2e (409 du DAO) et on recommence avec le numéro suivant
+    private Facture enregistrer(Facture facture) {
+        for (int essai = 1; ; essai++) {
+            facture.setNumero(prochainNumero(facture.getDateEmission().getYear()));
+            try {
+                return factureDAO.create(facture);
+            } catch (ConflitException e) {
+                // conflit qui ne vient pas du numéro (séance facturée entre temps) : on ne retente pas
+                boolean dejaFacturee = factureDAO.findBySeanceId(facture.getSeanceId()).isPresent();
+                if (dejaFacturee || essai >= MAX_ESSAIS_NUMERO) {
+                    throw e;
+                }
+            }
+        }
+    }
+
+    /** numéro qui suit le dernier de l'année (FAC-2026-0007 -> FAC-2026-0008), 0001 pour la première */
+    String prochainNumero(int annee) {
+        int suivant = factureDAO.findDernierNumero(annee)
+                .map(numero -> Integer.parseInt(numero.substring(numero.lastIndexOf('-') + 1)) + 1)
+                .orElse(1);
+        if (suivant > MAX_NUMERO_ANNUEL) {
+            throw new ConflitException("Les " + MAX_NUMERO_ANNUEL + " numéros de facture de " + annee
+                    + " sont épuisés");
+        }
+        return String.format("FAC-%d-%04d", annee, suivant);
     }
 }
