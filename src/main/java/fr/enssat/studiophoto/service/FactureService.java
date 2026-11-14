@@ -3,6 +3,7 @@ package fr.enssat.studiophoto.service;
 import fr.enssat.studiophoto.dao.FactureDAO;
 import fr.enssat.studiophoto.dao.FactureDAOImpl;
 import fr.enssat.studiophoto.exception.ConflitException;
+import fr.enssat.studiophoto.exception.RequeteInvalideException;
 import fr.enssat.studiophoto.exception.IntrouvableException;
 import fr.enssat.studiophoto.model.Client;
 import fr.enssat.studiophoto.model.ClientEntreprise;
@@ -14,7 +15,7 @@ import fr.enssat.studiophoto.model.StatutSeance;
 import java.time.Clock;
 import java.time.LocalDate;
 
-/** logique métier des factures : génération, numérotation, copie des infos client */
+/** logique métier des factures : génération, numérotation, copie des infos client, changement de statut */
 public class FactureService {
 
     // nb de tentatives si 2 générations simultannées veulent le même numéro
@@ -62,6 +63,35 @@ public class FactureService {
         facture.setMontantTTC(montants.ttc());
         figer(facture, seance);
         return enregistrer(facture);
+    }
+
+    public Facture trouver(long id) {
+        return factureDAO.findById(id)
+                .orElseThrow(() -> new IntrouvableException("Facture", id));
+    }
+
+    /**
+     * EN_ATTENTE -> PAYEE ou ANNULEE, rien d'autre (409 sinon).
+     * 400 si le statut est absent, 404 si la facture n'existe pas.
+     */
+    public Facture changerStatut(long id, StatutPaiement cible) {
+        if (cible == null) {
+            throw new RequeteInvalideException("Le statut de paiement est obligatoire");
+        }
+        Facture facture = trouver(id);
+        StatutPaiement actuel = facture.getStatutPaiement();
+        if (!actuel.peutPasserA(cible)) {
+            throw new ConflitException("La facture " + facture.getNumero() + " est " + actuel
+                    + " : le passage à " + cible + " est interdit");
+        }
+        // l'update est conditionné à l'ancien statut : si quelqu'un a modifié la facture entre temps,
+        // on refuse au lieu d'écraser son changement
+        if (!factureDAO.updateStatut(id, actuel, cible)) {
+            throw new ConflitException("La facture " + facture.getNumero()
+                    + " a été modifiée entre-temps : rechargez-la avant de réessayer");
+        }
+        facture.setStatutPaiement(cible);
+        return facture;
     }
 
     /**
