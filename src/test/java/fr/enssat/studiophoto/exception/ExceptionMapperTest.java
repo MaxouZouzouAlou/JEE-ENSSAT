@@ -46,6 +46,14 @@ class ExceptionMapperTest {
     }
 
     @Test
+    void jsonIllisibleDonne400() {
+        Response reponse = new ProcessingExceptionMapper().toResponse(
+                new jakarta.ws.rs.ProcessingException("Error deserializing object from entity stream."));
+
+        assertEquals(400, reponse.getStatus());
+    }
+
+    @Test
     void erreurJerseyGardeSonCode() {
         WebApplicationExceptionMapper mapper = new WebApplicationExceptionMapper();
 
