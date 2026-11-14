@@ -2,6 +2,7 @@ package fr.enssat.studiophoto.service;
 
 import fr.enssat.studiophoto.dao.ClientDAO;
 import fr.enssat.studiophoto.dao.ClientDAOImpl;
+import fr.enssat.studiophoto.exception.ConflitException;
 import fr.enssat.studiophoto.exception.DonneesInvalidesException;
 import fr.enssat.studiophoto.exception.RessourceIntrouvableException;
 import fr.enssat.studiophoto.model.Client;
@@ -21,6 +22,8 @@ import java.util.regex.Pattern;
  *   <li>particulier : nom et prénom obligatoires ;</li>
  *   <li>entreprise : raison sociale et numéro SIREN/TVA obligatoires, numéro bien formé.</li>
  * </ul>
+ *
+ * <p>Un client qui a des séances ne peut pas être supprimé.</p>
  */
 public class ClientService {
 
@@ -73,7 +76,20 @@ public class ClientService {
         return client;
     }
 
+    /**
+     * Supprime un client, sauf s'il a des séances (quel que soit leur statut) :
+     * ses séances et factures doivent garder leur client.
+     *
+     * @throws RessourceIntrouvableException si le client n'existe pas (404)
+     * @throws ConflitException si le client a au moins une séance (409)
+     */
     public void supprimer(long id) {
+        trouver(id);
+        int nbSeances = clientDAO.countSeances(id);
+        if (nbSeances > 0) {
+            throw new ConflitException("Impossible de supprimer ce client : il a " + nbSeances
+                    + (nbSeances > 1 ? " séances enregistrées." : " séance enregistrée."));
+        }
         if (!clientDAO.delete(id)) {
             throw new RessourceIntrouvableException("Client", id);
         }
