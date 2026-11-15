@@ -6,6 +6,28 @@
     <meta http-equiv="Cache-Control" content="no-cache">
     <title>Clients – Studio photo</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Styles propres à la page clients */
+        #formulaire[hidden] { display: none; } /* .carte impose display: block, qui l'emporte sur hidden */
+        .defilement { overflow-x: auto; }
+        .barre-outils { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0; }
+        .barre-outils input[type="search"] { flex: 1; min-width: 200px; }
+        fieldset { border: none; margin: 0; padding: 0; }
+        fieldset[disabled] { display: none; }
+        .choix-type { display: flex; gap: 16px; margin-bottom: 4px; }
+        .choix-type label { display: flex; gap: 6px; align-items: center; margin: 0; font-weight: normal; }
+        .deux-colonnes { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+        .carte input:not([type="radio"]) { width: 100%; box-sizing: border-box; }
+        .aide { color: var(--texte-doux); font-size: 13px; margin: 4px 0 0; }
+        td.actions-ligne { white-space: nowrap; text-align: right; }
+        td.actions-ligne button { padding: 4px 10px; }
+        .vide { color: var(--texte-doux); text-align: center; }
+        @media (max-width: 640px) {
+            .deux-colonnes { grid-template-columns: 1fr; }
+            .masquable { display: none; }
+            td.actions-ligne button { display: block; width: 100%; margin: 2px 0; }
+        }
+    </style>
     <script src="js/api.js"></script>
     <script src="js/layout.js"></script>
     <script src="js/clients.js"></script>
@@ -19,10 +41,80 @@
     <h1>Clients</h1>
     <p>Clients particuliers et entreprises.</p>
 
-    <!-- Lot 2 : contenu de la page à construire ici (le JS va dans js/clients.js) -->
-    <div id="contenu">
-        <p class="carte">Page à compléter (Lot 2).</p>
+    <!-- Formulaire de création / modification, masqué tant qu'on n'en a pas besoin -->
+    <form id="formulaire" class="carte" hidden novalidate>
+        <h2 id="titre-formulaire">Nouveau client</h2>
+
+        <div class="choix-type" role="radiogroup" aria-label="Type de client">
+            <label><input type="radio" name="type" value="PARTICULIER" checked> Particulier</label>
+            <label><input type="radio" name="type" value="ENTREPRISE"> Entreprise</label>
+        </div>
+
+        <!-- Un seul des deux blocs est actif : un fieldset désactivé est masqué
+             et ses champs ne sont ni validés ni envoyés -->
+        <fieldset id="champs-particulier" class="deux-colonnes">
+            <div>
+                <label for="prenom">Prénom</label>
+                <input id="prenom" name="prenom" maxlength="100" required autocomplete="given-name">
+            </div>
+            <div>
+                <label for="nom">Nom</label>
+                <input id="nom" name="nom" maxlength="100" required autocomplete="family-name">
+            </div>
+        </fieldset>
+
+        <fieldset id="champs-entreprise" class="deux-colonnes" disabled>
+            <div>
+                <label for="raisonSociale">Raison sociale</label>
+                <input id="raisonSociale" name="raisonSociale" maxlength="150" required autocomplete="organization">
+            </div>
+            <div>
+                <label for="sirenTva">SIREN ou n° de TVA</label>
+                <input id="sirenTva" name="sirenTva" maxlength="20" required>
+                <p class="aide">9 chiffres (ex. 901 234 567) ou FR + 11 caractères (ex. FR12 902345678).</p>
+            </div>
+        </fieldset>
+
+        <label for="adressePostale">Adresse postale</label>
+        <input id="adressePostale" name="adressePostale" maxlength="255" required autocomplete="street-address">
+
+        <label for="email">Email de contact</label>
+        <input id="email" name="email" type="email" maxlength="150" required autocomplete="email">
+
+        <div class="actions">
+            <button type="submit" id="bouton-enregistrer">Enregistrer</button>
+            <button type="button" class="secondaire" id="bouton-annuler">Annuler</button>
+        </div>
+    </form>
+
+    <div class="barre-outils">
+        <button type="button" id="bouton-nouveau">+ Nouveau client</button>
+        <input type="search" id="recherche" placeholder="Rechercher (nom, raison sociale, email, ville...)"
+               aria-label="Rechercher un client">
+        <select id="filtre-type" aria-label="Filtrer par type">
+            <option value="">Tous les types</option>
+            <option value="PARTICULIER">Particuliers</option>
+            <option value="ENTREPRISE">Entreprises</option>
+        </select>
     </div>
+
+    <div class="defilement">
+    <table>
+        <thead>
+        <tr>
+            <th>Client</th>
+            <th>Type</th>
+            <th class="masquable">Email</th>
+            <th class="masquable">Adresse</th>
+            <th><span hidden>Actions</span></th>
+        </tr>
+        </thead>
+        <tbody id="liste-clients">
+        <tr><td colspan="5" class="vide">Chargement...</td></tr>
+        </tbody>
+    </table>
+    </div>
+    <p class="aide" id="compteur"></p>
 </main>
 </body>
 </html>
