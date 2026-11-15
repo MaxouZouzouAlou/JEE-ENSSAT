@@ -14,8 +14,9 @@ import fr.enssat.studiophoto.model.StatutSeance;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.List;
 
-/** logique métier des factures : génération, numérotation, copie des infos client, changement de statut */
+/** logique métier des factures : génération, numérotation, copie des infos client, changement de statut, lecture */
 public class FactureService {
 
     // nb de tentatives si 2 générations simultannées veulent le même numéro
@@ -63,6 +64,11 @@ public class FactureService {
         facture.setMontantTTC(montants.ttc());
         figer(facture, seance);
         return enregistrer(facture);
+    }
+
+    /** toutes les factures, la plus récente en premier */
+    public List<Facture> lister() {
+        return factureDAO.findAll();
     }
 
     public Facture trouver(long id) {

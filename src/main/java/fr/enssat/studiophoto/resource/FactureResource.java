@@ -1,9 +1,12 @@
 package fr.enssat.studiophoto.resource;
 
+import fr.enssat.studiophoto.exception.RequeteInvalideException;
 import fr.enssat.studiophoto.model.Facture;
 import fr.enssat.studiophoto.service.FacturePdf;
 import fr.enssat.studiophoto.service.FactureService;
+import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -11,11 +14,15 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import java.util.List;
+
 /**
- * Routes /api/factures : pour l'instant seulement GET /{id}/pdf.
+ * Routes /api/factures : GET liste, GET /{id}, GET /{id}/pdf, PATCH /{id}/statut.
+ * La génération d'une facture est dans SeanceFactureResource.
  */
 @Path("/factures")
 @Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 public class FactureResource {
 
     private final FactureService factureService;
@@ -30,6 +37,17 @@ public class FactureResource {
         this.facturePdf = facturePdf;
     }
 
+    @GET
+    public List<Facture> lister() {
+        return factureService.lister();
+    }
+
+    @GET
+    @Path("/{id}")
+    public Facture trouver(@PathParam("id") long id) {
+        return factureService.trouver(id);
+    }
+
     // téléchargement du PDF, le fichier porte le numéro de la facture
     @GET
     @Path("/{id}/pdf")
@@ -40,5 +58,14 @@ public class FactureResource {
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + facture.getNumero() + ".pdf\"")
                 .build();
+    }
+
+    @PATCH
+    @Path("/{id}/statut")
+    public Facture changerStatut(@PathParam("id") long id, StatutRequete requete) {
+        if (requete == null) {
+            throw new RequeteInvalideException("Le corps de la requête est vide : le statut est attendu.");
+        }
+        return factureService.changerStatut(id, requete.getStatut());
     }
 }
