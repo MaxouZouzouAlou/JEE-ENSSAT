@@ -1,5 +1,6 @@
 package fr.enssat.studiophoto.exception;
 
+import jakarta.ws.rs.ProcessingException;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -55,5 +56,17 @@ class MappersTest {
         assertEquals(500, reponse.getStatus());
         assertFalse(corps.message().contains("Access denied"));
         assertFalse(corps.message().contains("Lecture impossible"));
+    }
+
+    @Test
+    void unJsonIllisibleDonne400AvecUnMessageNeutre() {
+        ProcessingException erreur = new ProcessingException(
+                new IllegalArgumentException("No enum constant StatutPaiement.FOO"));
+
+        Response reponse = new JsonIllisibleMapper().toResponse(erreur);
+
+        ErreurJson corps = assertInstanceOf(ErreurJson.class, reponse.getEntity());
+        assertEquals(400, reponse.getStatus());
+        assertFalse(corps.message().contains("StatutPaiement"));
     }
 }
