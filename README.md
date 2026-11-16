@@ -84,6 +84,9 @@ Attendre le message « Application démarrée. (Faites CTRL+C pour arrêter) »,
 | --- | --- |
 | Front (page d'accueil) | http://localhost:8080/ |
 | API REST | http://localhost:8080/api/... (ex. `/api/photographes`) |
+| Documentation de l'API (Swagger UI) | http://localhost:8080/swagger/ |
+
+La documentation est générée à partir de `src/main/resources/static/openapi.yaml` : à mettre à jour quand une route est ajoutée ou modifiée.
 
 `CTRL+C` arrête le serveur.
 
