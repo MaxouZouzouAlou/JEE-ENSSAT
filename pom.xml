@@ -4,15 +4,18 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.tutorial</groupId>
-    <artifactId>HelloJersey</artifactId>
+    <groupId>fr.enssat</groupId>
+    <artifactId>studiophoto</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <name>Studio photo</name>
 
     <properties>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jersey.version>4.0.2</jersey.version>
+        <junit.version>5.13.4</junit.version>
+        <openpdf.version>2.0.3</openpdf.version>
     </properties>
 
     <dependencies>
@@ -44,6 +47,21 @@
             <version>26.7.0</version>
             <scope>compile</scope>
         </dependency>
+
+        <!-- Génération des factures en PDF (lot 4) -->
+        <dependency>
+            <groupId>com.github.librepdf</groupId>
+            <artifactId>openpdf</artifactId>
+            <version>${openpdf.version}</version>
+        </dependency>
+
+        <!-- Tests unitaires des services (faux DAO écrits à la main, pas de bibliothèque de mock) -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -53,6 +71,13 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.16.0</version>
+            </plugin>
+
+            <!-- Lance les tests JUnit 5 avec "mvn test" -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.3</version>
             </plugin>
 
             <!-- Exec Plugin: Allows you to run the app using "mvn exec:java" -->

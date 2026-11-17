@@ -1,0 +1,749 @@
+openapi: 3.0.3
+info:
+  title: Studio photo – API REST
+  version: 1.0.0
+  description: |
+    Contrat de l'API figé en phase 0 (P0.6). Toute modification d'une route, d'un JSON
+    ou d'un code de retour passe par une pull request annoncée au groupe, et ce fichier
+    est mis à jour dans la même pull request.
+
+    **Conventions**
+    - Tous les échanges sont en JSON (`application/json`), sauf le PDF des factures.
+    - Dates au format `AAAA-MM-JJ`, heures au format `HH:MM:SS`, durées en minutes,
+      montants en nombres décimaux à 2 chiffres.
+    - Dans un corps de requête, un objet lié (photographe, client, type de séance,
+      spécialité) est donné par son seul identifiant : `{"id": 2}`. Les réponses
+      renvoient l'objet complet.
+    - Codes de retour : 200 lecture/modification, 201 création (en-tête `Location`),
+      204 suppression, 400 données invalides, 404 identifiant inconnu (dans le chemin),
+      409 action impossible dans l'état actuel.
+    - Toute erreur renvoie le format commun `Erreur` : `{status, erreur, message}` (P0.7).
+      Le `message` est en français et affiché tel quel par le front.
+servers:
+  - url: /api
+
+tags:
+  - name: Photographes
+    description: Lot 1 – photographes et spécialités
+  - name: Clients
+    description: Lot 2 – clients particuliers et entreprises
+  - name: Séances
+    description: Lot 3 – séances photo, statuts et planning
+  - name: Factures
+    description: Lot 4 – facturation et PDF
+  - name: Statistiques
+    description: Lot 5 – classements et chiffre d'affaires
+
+paths:
+
+  # ===================================================================
+  # Lot 1 – Photographes et spécialités
+  # ===================================================================
+  /photographes:
+    get:
+      tags: [Photographes]
+      summary: Lister les photographes (triés par nom)
+      parameters:
+        - name: actif
+          in: query
+          description: "true : actifs seulement (listes déroulantes des séances) ; false : inactifs ; absent : tous"
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Liste des photographes
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Photographe' } }
+    post:
+      tags: [Photographes]
+      summary: Créer un photographe (toujours actif)
+      description: Nom obligatoire ; email obligatoire, valide et unique (sans tenir compte de la casse, enregistré en minuscules).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PhotographeEntree' }
+      responses:
+        '201':
+          description: Photographe créé
+          headers:
+            Location: { schema: { type: string }, description: URL du photographe créé }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Photographe' }
+        '400': { $ref: '#/components/responses/DonneesInvalides' }
+        '409':
+          description: Email déjà utilisé par un autre photographe
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+
+  /photographes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Photographes]
+      summary: Détail d'un photographe
+      responses:
+        '200':
+          description: Photographe
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Photographe' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+    put:
+      tags: [Photographes]
+      summary: Modifier nom, email et spécialités
+      description: Le champ `actif` est ignoré ; le statut se change par `PATCH /photographes/{id}/statut`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PhotographeEntree' }
+      responses:
+        '200':
+          description: Photographe modifié
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Photographe' }
+        '400': { $ref: '#/components/responses/DonneesInvalides' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409':
+          description: Email déjà utilisé par un autre photographe
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+    delete:
+      tags: [Photographes]
+      summary: Supprimer un photographe sans séance
+      description: Refusé (409) dès que le photographe a au moins une séance, même passée ou annulée ; il faut alors le désactiver.
+      responses:
+        '204': { description: Photographe supprimé }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409':
+          description: Le photographe a des séances
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+
+  /photographes/{id}/statut:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Photographes]
+      summary: Activer ou désactiver un photographe
+      description: |
+        Désactivation d'un photographe qui a des séances à venir (PLANIFIEE ou CONFIRMEE,
+        début dans le futur) : sans `confirmer=true`, réponse 409 avec `nombreSeances` et
+        rien ne change ; avec `confirmer=true`, le photographe est désactivé et ces séances
+        passent en ANNULEE. Les séances passées ne sont jamais modifiées.
+      parameters:
+        - name: confirmer
+          in: query
+          description: true pour accepter l'annulation des séances à venir
+          schema: { type: boolean, default: false }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actif]
+              properties:
+                actif: { type: boolean, example: false }
+      responses:
+        '200':
+          description: Statut changé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  photographe: { $ref: '#/components/schemas/Photographe' }
+                  seancesAnnulees: { type: integer, example: 2, description: Séances à venir passées en ANNULEE }
+        '400': { $ref: '#/components/responses/DonneesInvalides' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409':
+          description: Confirmation requise (séances à venir)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErreurConfirmation' }
+
+  /specialites:
+    get:
+      tags: [Photographes]
+      summary: Lister les spécialités (liste fixe)
+      responses:
+        '200':
+          description: Reportage, Mariage et fêtes, Famille
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Specialite' } }
+
+  # ===================================================================
+  # Lot 2 – Clients
+  # ===================================================================
+  /clients:
+    get:
+      tags: [Clients]
+      summary: Lister les clients
+      parameters:
+        - name: type
+          in: query
+          schema: { $ref: '#/components/schemas/TypeClient' }
+      responses:
+        '200':
+          description: Liste des clients
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Client' } }
+    post:
+      tags: [Clients]
+      summary: Créer un client
+      description: |
+        `type` obligatoire. PARTICULIER : `nom` et `prenom` obligatoires.
+        ENTREPRISE : `raisonSociale` et `sirenTva` (SIREN 9 chiffres ou n° de TVA) obligatoires.
+        Dans les deux cas : `adressePostale` et `email` (valide) obligatoires.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClientEntree' }
+      responses:
+        '201':
+          description: Client créé
+          headers:
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Client' }
+        '400': { $ref: '#/components/responses/DonneesInvalides' }
+
+  /clients/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Clients]
+      summary: Détail d'un client
+      responses:
+        '200':
+          description: Client
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Client' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+    put:
+      tags: [Clients]
+      summary: Modifier un client (mêmes contrôles qu'à la création)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClientEntree' }
+      responses:
+        '200':
+          description: Client modifié
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Client' }
+        '400': { $ref: '#/components/responses/DonneesInvalides' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+    delete:
+      tags: [Clients]
+      summary: Supprimer un client sans séance
+      responses:
+        '204': { description: Client supprimé }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409':
+          description: Le client a des séances
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+
+  # ===================================================================
+  # Lot 3 – Séances et types de séance
+  # ===================================================================
+  /types-seance:
+    get:
+      tags: [Séances]
+      summary: Lister les types de séance et leur tarif horaire HT
+      responses:
+        '200':
+          description: Types de séance
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/TypeSeance' } }
+
+  /seances:
+    get:
+      tags: [Séances]
+      summary: Planning – lister les séances (triées par date puis heure)
+      parameters:
+        - name: debut
+          in: query
+          description: Première date incluse (AAAA-MM-JJ)
+          schema: { type: string, format: date }
+        - name: fin
+          in: query
+          description: Dernière date incluse (AAAA-MM-JJ)
+          schema: { type: string, format: date }
+        - name: photographeId
+          in: query
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Séances de la période
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Seance' } }
+        '400':
+          description: Date mal formée ou début après fin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+    post:
+      tags: [Séances]
+      summary: Créer une séance (statut initial PLANIFIEE)
+      description: |
+        400 : champ manquant, date et heure dans le passé, durée ≤ 0, photographe, client
+        ou type de séance inconnu.
+        409 : photographe inactif, ou photographe déjà occupé sur ce créneau
+        (chevauchement avec une séance non annulée ; des séances bout à bout sont autorisées).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SeanceEntree' }
+      responses:
+        '201':
+          description: Séance créée
+          headers:
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Seance' }
+        '400': { $ref: '#/components/responses/DonneesInvalides' }
+        '409':
+          description: Photographe inactif ou indisponible
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+
+  /seances/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Séances]
+      summary: Détail d'une séance
+      responses:
+        '200':
+          description: Séance
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Seance' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+    put:
+      tags: [Séances]
+      summary: Modifier une séance
+      description: |
+        Mêmes contrôles qu'à la création (la séance elle-même est exclue du calcul de
+        chevauchement). Le statut ne change pas ici. 409 si la séance est TERMINEE ou ANNULEE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SeanceEntree' }
+      responses:
+        '200':
+          description: Séance modifiée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Seance' }
+        '400': { $ref: '#/components/responses/DonneesInvalides' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409':
+          description: Séance terminée ou annulée, photographe inactif ou indisponible
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+    delete:
+      tags: [Séances]
+      summary: Supprimer une séance sans facture
+      responses:
+        '204': { description: Séance supprimée }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409':
+          description: Une facture existe pour cette séance
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+
+  /seances/{id}/statut:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Séances]
+      summary: Changer le statut d'une séance
+      description: |
+        Transitions autorisées : PLANIFIEE → CONFIRMEE ou ANNULEE ; CONFIRMEE → TERMINEE
+        (seulement si la séance est passée) ou ANNULEE. TERMINEE et ANNULEE sont définitifs.
+        Toute autre transition : 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [statut]
+              properties:
+                statut: { $ref: '#/components/schemas/StatutSeance' }
+      responses:
+        '200':
+          description: Séance avec son nouveau statut
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Seance' }
+        '400': { $ref: '#/components/responses/DonneesInvalides' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409':
+          description: Transition interdite
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+
+  # ===================================================================
+  # Lot 4 – Factures
+  # ===================================================================
+  /seances/{id}/facture:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Factures]
+      summary: Générer la facture d'une séance TERMINEE
+      description: |
+        Numéro FAC-AAAA-NNNN (repart à 0001 chaque année), date d'émission du jour,
+        statut EN_ATTENTE. HT = tarif horaire du type × durée, TVA 20 %, montants arrondis
+        à 2 décimales. Coordonnées du client et détail de la prestation copiés dans la facture.
+        Pas de corps de requête.
+      responses:
+        '201':
+          description: Facture créée
+          headers:
+            Location: { schema: { type: string }, description: 'URL de la facture : /api/factures/{id}' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Facture' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409':
+          description: Séance non TERMINEE ou déjà facturée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+
+  /factures:
+    get:
+      tags: [Factures]
+      summary: Lister les factures (les plus récentes d'abord)
+      parameters:
+        - name: statut
+          in: query
+          schema: { $ref: '#/components/schemas/StatutPaiement' }
+        - name: seanceId
+          in: query
+          description: Facture d'une séance donnée (liste vide si la séance n'est pas facturée)
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Factures
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Facture' } }
+
+  /factures/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Factures]
+      summary: Détail d'une facture
+      responses:
+        '200':
+          description: Facture
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Facture' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+
+  /factures/{id}/statut:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Factures]
+      summary: Changer le statut de paiement
+      description: Seules transitions autorisées EN_ATTENTE → PAYEE et EN_ATTENTE → ANNULEE ; les autres donnent 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [statutPaiement]
+              properties:
+                statutPaiement: { $ref: '#/components/schemas/StatutPaiement' }
+      responses:
+        '200':
+          description: Facture avec son nouveau statut
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Facture' }
+        '400': { $ref: '#/components/responses/DonneesInvalides' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409':
+          description: Transition interdite
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+
+  /factures/{id}/pdf:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Factures]
+      summary: Télécharger la facture en PDF
+      responses:
+        '200':
+          description: Fichier PDF (en-tête Content-Disposition avec le numéro de facture)
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '404': { $ref: '#/components/responses/Introuvable' }
+
+  # ===================================================================
+  # Lot 5 – Statistiques
+  # ===================================================================
+  /statistiques/top-seances:
+    get:
+      tags: [Statistiques]
+      summary: Top 5 des photographes par nombre de séances TERMINEE
+      description: Tri décroissant ; à égalité, par nom. Moins de 5 lignes s'il y a moins de 5 photographes concernés.
+      responses:
+        '200':
+          description: Classement
+          content:
+            application/json:
+              schema: { type: array, maxItems: 5, items: { $ref: '#/components/schemas/LigneClassement' } }
+
+  /statistiques/top-duree:
+    get:
+      tags: [Statistiques]
+      summary: Top 5 des photographes par durée cumulée des séances TERMINEE
+      description: "`valeur` = durée totale en minutes. Tri décroissant ; à égalité, par nom."
+      responses:
+        '200':
+          description: Classement
+          content:
+            application/json:
+              schema: { type: array, maxItems: 5, items: { $ref: '#/components/schemas/LigneClassement' } }
+
+  /statistiques/chiffre-affaires:
+    get:
+      tags: [Statistiques]
+      summary: Chiffre d'affaires des factures PAYEE émises sur une période
+      parameters:
+        - name: debut
+          in: query
+          required: true
+          description: Première date d'émission incluse
+          schema: { type: string, format: date }
+        - name: fin
+          in: query
+          required: true
+          description: Dernière date d'émission incluse
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Totaux HT et TTC (0 si aucune facture)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChiffreAffaires' }
+        '400':
+          description: Date manquante ou mal formée, ou début après fin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+
+components:
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+
+  responses:
+    DonneesInvalides:
+      description: Données invalides (champ manquant, format incorrect...)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erreur' }
+          example: { status: 400, erreur: Bad Request, message: Le nom est obligatoire. }
+    Introuvable:
+      description: Identifiant inconnu
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erreur' }
+          example: { status: 404, erreur: Not Found, message: Photographe 42 introuvable. }
+
+  schemas:
+
+    # ---------- Erreurs (P0.7) ----------
+    Erreur:
+      type: object
+      description: Format commun de toutes les réponses d'erreur
+      properties:
+        status: { type: integer, example: 409 }
+        erreur: { type: string, description: Libellé standard du code HTTP, example: Conflict }
+        message: { type: string, description: 'Explication en français, affichée par le front', example: Cet email est déjà utilisé. }
+    ErreurConfirmation:
+      description: Erreur 409 qui peut être levée en renvoyant la requête avec `confirmer=true`
+      allOf:
+        - $ref: '#/components/schemas/Erreur'
+        - type: object
+          properties:
+            nombreSeances: { type: integer, example: 2, description: Nombre de séances qui seront annulées }
+
+    Reference:
+      type: object
+      description: Objet lié donné par son identifiant
+      required: [id]
+      properties:
+        id: { type: integer, format: int64, example: 1 }
+
+    # ---------- Lot 1 ----------
+    Specialite:
+      type: object
+      properties:
+        id: { type: integer, format: int64, example: 2 }
+        libelle: { type: string, example: Mariage et fêtes }
+    Photographe:
+      type: object
+      properties:
+        id: { type: integer, format: int64, example: 1 }
+        nom: { type: string, example: Alice Martin }
+        email: { type: string, example: alice.martin@studio.example }
+        actif: { type: boolean, example: true }
+        specialites: { type: array, items: { $ref: '#/components/schemas/Specialite' } }
+    PhotographeEntree:
+      type: object
+      required: [nom, email]
+      properties:
+        nom: { type: string, maxLength: 100, example: Alice Martin }
+        email: { type: string, maxLength: 150, example: alice.martin@studio.example }
+        specialites:
+          type: array
+          items: { $ref: '#/components/schemas/Reference' }
+          example: [{ id: 2 }, { id: 3 }]
+
+    # ---------- Lot 2 ----------
+    TypeClient:
+      type: string
+      enum: [PARTICULIER, ENTREPRISE]
+    Client:
+      type: object
+      description: Champs nom/prenom pour un particulier, raisonSociale/sirenTva pour une entreprise
+      properties:
+        id: { type: integer, format: int64, example: 1 }
+        type: { $ref: '#/components/schemas/TypeClient' }
+        adressePostale: { type: string, example: '12 rue des Lilas, 22300 Lannion' }
+        email: { type: string, example: julie.bernard@mail.example }
+        nom: { type: string, example: Bernard }
+        prenom: { type: string, example: Julie }
+        raisonSociale: { type: string, example: Agence Horizon Événements }
+        sirenTva: { type: string, example: '901234567' }
+    ClientEntree:
+      type: object
+      required: [type, adressePostale, email]
+      properties:
+        type: { $ref: '#/components/schemas/TypeClient' }
+        adressePostale: { type: string, maxLength: 255 }
+        email: { type: string, maxLength: 150 }
+        nom: { type: string, maxLength: 100, description: PARTICULIER uniquement }
+        prenom: { type: string, maxLength: 100, description: PARTICULIER uniquement }
+        raisonSociale: { type: string, maxLength: 150, description: ENTREPRISE uniquement }
+        sirenTva: { type: string, maxLength: 20, description: ENTREPRISE uniquement }
+      example: { type: PARTICULIER, nom: Bernard, prenom: Julie, adressePostale: '12 rue des Lilas, 22300 Lannion', email: julie@mail.example }
+
+    # ---------- Lot 3 ----------
+    StatutSeance:
+      type: string
+      enum: [PLANIFIEE, CONFIRMEE, TERMINEE, ANNULEE]
+    TypeSeance:
+      type: object
+      properties:
+        id: { type: integer, format: int64, example: 1 }
+        libelle: { type: string, example: Portrait }
+        tarifHoraireHT: { type: number, example: 80.00 }
+    Seance:
+      type: object
+      properties:
+        id: { type: integer, format: int64, example: 13 }
+        date: { type: string, format: date, example: '2026-11-20' }
+        heureDebut: { type: string, example: '10:00:00' }
+        duree: { type: integer, description: Durée en minutes, example: 120 }
+        lieu: { type: string, example: 'Studio du centre-ville, Lannion' }
+        statut: { $ref: '#/components/schemas/StatutSeance' }
+        typeSeance: { $ref: '#/components/schemas/TypeSeance' }
+        photographe: { $ref: '#/components/schemas/Photographe' }
+        client: { $ref: '#/components/schemas/Client' }
+    SeanceEntree:
+      type: object
+      required: [date, heureDebut, duree, lieu, typeSeance, photographe, client]
+      properties:
+        date: { type: string, format: date, example: '2026-11-20' }
+        heureDebut: { type: string, example: '10:00:00' }
+        duree: { type: integer, minimum: 1, example: 120 }
+        lieu: { type: string, maxLength: 255, example: 'Studio du centre-ville, Lannion' }
+        typeSeance: { $ref: '#/components/schemas/Reference' }
+        photographe: { $ref: '#/components/schemas/Reference' }
+        client: { $ref: '#/components/schemas/Reference' }
+
+    # ---------- Lot 4 ----------
+    StatutPaiement:
+      type: string
+      enum: [EN_ATTENTE, PAYEE, ANNULEE]
+    Facture:
+      type: object
+      properties:
+        id: { type: integer, format: int64, example: 1 }
+        numero: { type: string, example: FAC-2026-0001 }
+        dateEmission: { type: string, format: date }
+        montantHT: { type: number, example: 1200.00 }
+        tauxTVA: { type: number, description: En pourcentage, example: 20.00 }
+        montantTTC: { type: number, example: 1440.00 }
+        statutPaiement: { $ref: '#/components/schemas/StatutPaiement' }
+        seanceId: { type: integer, format: int64 }
+        clientDesignation: { type: string, description: '« Prénom Nom » ou raison sociale, copié à la génération' }
+        clientAdresse: { type: string }
+        clientEmail: { type: string }
+        clientSirenTva: { type: string, nullable: true }
+        prestationDate: { type: string, format: date }
+        prestationHeure: { type: string, example: '14:00:00' }
+        prestationDuree: { type: integer, description: Durée en minutes }
+        prestationType: { type: string, example: Mariage }
+        photographeNom: { type: string, example: Alice Martin }
+
+    # ---------- Lot 5 ----------
+    LigneClassement:
+      type: object
+      properties:
+        photographeId: { type: integer, format: int64, example: 2 }
+        nom: { type: string, example: Bruno Leroy }
+        valeur: { type: integer, description: Nombre de séances ou durée totale en minutes selon la route, example: 3 }
+    ChiffreAffaires:
+      type: object
+      properties:
+        debut: { type: string, format: date }
+        fin: { type: string, format: date }
+        nombreFactures: { type: integer, example: 5 }
+        montantHT: { type: number, example: 3420.00 }
+        montantTTC: { type: number, example: 4104.00 }

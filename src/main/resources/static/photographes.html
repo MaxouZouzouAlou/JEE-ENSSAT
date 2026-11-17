@@ -6,6 +6,49 @@
     <meta http-equiv="Cache-Control" content="no-cache">
     <title>Photographes – Studio photo</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Styles propres à cette page (le style commun est dans css/style.css) */
+        [hidden] { display: none !important; }
+
+        .barre {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 16px 0;
+        }
+        .barre label { display: inline; margin: 0 6px 0 0; }
+
+        fieldset {
+            margin: 16px 0 0;
+            padding: 8px 12px 12px;
+            border: 1px solid var(--bordure);
+            border-radius: 6px;
+        }
+        legend { font-weight: 600; padding: 0 4px; }
+        fieldset label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin: 8px 20px 0 0;
+            font-weight: normal;
+        }
+
+        td.actions-ligne { white-space: nowrap; }
+        td.actions-ligne button { padding: 4px 10px; margin: 2px 4px 2px 0; }
+        .texte-doux { color: var(--texte-doux); }
+
+        dialog {
+            max-width: 460px;
+            border: 1px solid var(--bordure);
+            border-radius: 6px;
+            padding: 20px;
+        }
+        dialog::backdrop { background: rgba(31, 41, 51, 0.4); }
+        dialog h2 { margin-top: 0; font-size: 1.2em; }
+        dialog .actions { justify-content: flex-end; margin-bottom: 0; }
+    </style>
     <script src="js/api.js"></script>
     <script src="js/layout.js"></script>
     <script src="js/photographes.js"></script>
@@ -19,10 +62,65 @@
     <h1>Photographes</h1>
     <p>Liste des photographes, spécialités, activation et désactivation.</p>
 
-    <!-- Lot 1 : contenu de la page à construire ici (le JS va dans js/photographes.js) -->
-    <div id="contenu">
-        <p class="carte">Page à compléter (Lot 1).</p>
+    <div class="barre">
+        <div>
+            <label for="filtre-statut">Afficher</label>
+            <select id="filtre-statut">
+                <option value="">Tous les photographes</option>
+                <option value="true">Actifs</option>
+                <option value="false">Inactifs</option>
+            </select>
+        </div>
+        <button type="button" id="bouton-nouveau">Nouveau photographe</button>
     </div>
+
+    <!-- Formulaire de création et de modification (masqué tant qu'on ne l'ouvre pas) -->
+    <form id="formulaire" class="carte" hidden>
+        <h2 id="titre-formulaire">Nouveau photographe</h2>
+
+        <label for="nom">Nom</label>
+        <input id="nom" name="nom" required maxlength="100" autocomplete="off">
+
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" required maxlength="150" autocomplete="off">
+
+        <fieldset>
+            <legend>Spécialités</legend>
+            <div id="cases-specialites"><span class="texte-doux">Chargement…</span></div>
+        </fieldset>
+
+        <div class="actions">
+            <button type="submit" id="bouton-enregistrer">Enregistrer</button>
+            <button type="button" class="secondaire" id="bouton-annuler">Annuler</button>
+        </div>
+    </form>
+
+    <table>
+        <thead>
+        <tr>
+            <th scope="col">Nom</th>
+            <th scope="col">Email</th>
+            <th scope="col">Spécialités</th>
+            <th scope="col">Statut</th>
+            <th scope="col">Actions</th>
+        </tr>
+        </thead>
+        <tbody id="liste">
+        <tr><td colspan="5" class="texte-doux">Chargement…</td></tr>
+        </tbody>
+    </table>
 </main>
+
+<!-- Boîte de confirmation (activer, désactiver, supprimer) -->
+<dialog id="confirmation" aria-labelledby="confirmation-titre">
+    <form method="dialog">
+        <h2 id="confirmation-titre"></h2>
+        <p id="confirmation-texte"></p>
+        <div class="actions">
+            <button type="submit" value="annuler" class="secondaire">Annuler</button>
+            <button type="submit" value="ok" id="confirmation-ok">Confirmer</button>
+        </div>
+    </form>
+</dialog>
 </body>
 </html>

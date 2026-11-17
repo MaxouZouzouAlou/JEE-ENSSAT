@@ -51,8 +51,9 @@ public class Main {
 
         final ResourceConfig rc = new ResourceConfig();
 
-        // Ressources du studio photo : toutes les classes @Path du package sont enregistrées
-        rc.packages("fr.enssat.studiophoto.resource");
+        // Ressources du studio photo : toutes les classes @Path du package resource sont enregistrées,
+        // ainsi que les ExceptionMapper du package exception (format d'erreur commun)
+        rc.packages("fr.enssat.studiophoto.resource", "fr.enssat.studiophoto.exception");
 
         HttpServer httpServer = GrizzlyHttpServerFactory.createHttpServer(URI.create(apiUri), rc);
 
