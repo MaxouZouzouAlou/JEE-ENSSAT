@@ -46,6 +46,83 @@ public class SeanceDAO {
         return findByQuery("select * from seance");
     }
 
+    public List<TypeSeance> findTypes() {
+        List<TypeSeance> result = new ArrayList<>();
+        Connection connection = DBManager.getInstance().getConnection();
+        PreparedStatement statement = null;
+        ResultSet rs = null;
+        try {
+            statement = connection.prepareStatement(
+                    "SELECT id, libelle, tarif_horaire_ht FROM type_seance ORDER BY libelle");
+            rs = statement.executeQuery();
+            while (rs.next()) {
+                result.add(new TypeSeance(
+                        rs.getLong("id"),
+                        rs.getString("libelle"),
+                        rs.getBigDecimal("tarif_horaire_ht")));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            DBManager.getInstance().cleanup(connection, statement, rs);
+        }
+        return result;
+    }
+
+    public List<Photographe> findPhotographesActifs() {
+        List<Photographe> result = new ArrayList<>();
+        Connection connection = DBManager.getInstance().getConnection();
+        PreparedStatement statement = null;
+        ResultSet rs = null;
+        try {
+            statement = connection.prepareStatement(
+                    "SELECT id, nom, email, actif FROM photographe WHERE actif = TRUE ORDER BY nom");
+            rs = statement.executeQuery();
+            while (rs.next()) {
+                result.add(new Photographe(
+                        rs.getLong("id"),
+                        rs.getString("nom"),
+                        rs.getString("email"),
+                        rs.getBoolean("actif")));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            DBManager.getInstance().cleanup(connection, statement, rs);
+        }
+        return result;
+    }
+
+    public List<Client> findClients() {
+        List<Client> result = new ArrayList<>();
+        Connection connection = DBManager.getInstance().getConnection();
+        PreparedStatement statement = null;
+        ResultSet rs = null;
+        try {
+            statement = connection.prepareStatement(
+                    "SELECT id, type, adresse_postale, email, nom, prenom, raison_sociale, siren_tva "
+                            + "FROM client ORDER BY type, nom, prenom, raison_sociale");
+            rs = statement.executeQuery();
+            while (rs.next()) {
+                long id = rs.getLong("id");
+                String adresse = rs.getString("adresse_postale");
+                String email = rs.getString("email");
+                if ("ENTREPRISE".equals(rs.getString("type"))) {
+                    result.add(new ClientEntreprise(
+                            id, adresse, email, rs.getString("raison_sociale"), rs.getString("siren_tva")));
+                } else {
+                    result.add(new ClientParticulier(
+                            id, adresse, email, rs.getString("nom"), rs.getString("prenom")));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            DBManager.getInstance().cleanup(connection, statement, rs);
+        }
+        return result;
+    }
+
     public List<Seance> findByFilters(Long id, Long photographeId, Date dateDebut, Date dateFin) {
         StringBuilder query = new StringBuilder(
                 "SELECT s.*, ts.libelle AS type_libelle, ts.tarif_horaire_ht AS type_tarif, "
@@ -140,16 +217,16 @@ public class SeanceDAO {
         try {
             statement = connection.prepareStatement(
                     "INSERT INTO seance (date_seance, heure_debut, duree_minutes, lieu, statut, type_seance_id, photographe_id, client_id) "
-                            + "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                            + "SELECT ?, ?, ?, ?, 'PLANIFIEE', ?, p.id, ? "
+                            + "FROM photographe p WHERE p.id = ? AND p.actif = TRUE",
                     Statement.RETURN_GENERATED_KEYS);
             statement.setDate(1, date_seance);
             statement.setTime(2, heure_seance);
             statement.setInt(3, duree_minute);
             statement.setString(4, lieu);
-            statement.setString(5, "PLANIFIEE");
-            statement.setLong(6, type_seance.getId());
+            statement.setLong(5, type_seance.getId());
+            statement.setLong(6, client.getId());
             statement.setLong(7, photographe.getId());
-            statement.setLong(8, client.getId());
 
             if (statement.executeUpdate() == 0) {
                 return null;

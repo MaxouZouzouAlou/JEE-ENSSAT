@@ -29,7 +29,7 @@ public class Main {
                 } catch (Exception e) {
                     LOGGER.log(Level.SEVERE, null, e);
                 }
-            }));
+            }));    
 
             LOGGER.info("Application démarrée. (Faites CTRL+C pour arrêter)");
             Thread.currentThread().join();
