@@ -4,6 +4,7 @@ import org.glassfish.grizzly.http.server.CLStaticHttpHandler;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
+import fr.enssat.studiophoto.model.SeanceController;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -53,6 +54,7 @@ public class Main {
 
         // Ressources du studio photo : toutes les classes @Path du package sont enregistrées
         rc.packages("fr.enssat.studiophoto.resource");
+        rc.register(SeanceController.class);
 
         HttpServer httpServer = GrizzlyHttpServerFactory.createHttpServer(URI.create(apiUri), rc);
 

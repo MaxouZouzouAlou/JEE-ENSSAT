@@ -19,9 +19,23 @@
     <h1>Séances</h1>
     <p>Planning des séances, création, modification et changement de statut.</p>
 
-    <!-- Lots 2 et 3 : contenu de la page à construire ici (le JS va dans js/seances.js) -->
     <div id="contenu">
-        <p class="carte">Page à compléter (Lots 2 et 3).</p>
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Heure</th>
+                    <th scope="col">Durée</th>
+                    <th scope="col">Lieu</th>
+                    <th scope="col">Statut</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="liste-seances">
+                <tr><td colspan="7">Chargement des séances…</td></tr>
+            </tbody>
+        </table>
     </div>
 </main>
 </body>
