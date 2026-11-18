@@ -24,6 +24,8 @@ servers:
 tags:
   - name: Clients
     description: Clients particuliers et entreprises
+  - name: Factures
+    description: Facturation des séances terminées, statut de paiement et export PDF
 
 paths:
   /clients:
@@ -138,8 +140,148 @@ paths:
         '500':
           $ref: '#/components/responses/ErreurServeur'
 
+  /seances/{id}/facture:
+    post:
+      tags: [Factures]
+      summary: Générer la facture d'une séance
+      description: |
+        Seule une séance TERMINEE peut être facturée, une seule fois. Les montants sont calculés
+        (HT = tarif horaire x durée / 60, TVA 20 %), le numéro est FAC-AAAA-NNNN et les coordonnées
+        du client sont copiées dans la facture.
+      operationId: genererFacture
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identifiant de la séance
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '201':
+          description: Facture créée (header Location vers la facture)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Facture'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '409':
+          description: Séance pas terminée ou déjà facturée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+              example:
+                status: 409
+                erreur: Conflict
+                message: La séance 9 a déjà une facture
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+  /factures:
+    get:
+      tags: [Factures]
+      summary: Lister les factures
+      description: De la plus récente à la plus ancienne.
+      operationId: listerFactures
+      responses:
+        '200':
+          description: Liste des factures
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Facture'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+  /factures/{id}:
+    parameters:
+      - $ref: '#/components/parameters/FactureId'
+    get:
+      tags: [Factures]
+      summary: Consulter une facture
+      operationId: trouverFacture
+      responses:
+        '200':
+          description: La facture
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Facture'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+  /factures/{id}/pdf:
+    parameters:
+      - $ref: '#/components/parameters/FactureId'
+    get:
+      tags: [Factures]
+      summary: Télécharger le PDF d'une facture
+      description: Le PDF est regénéré à chaque appel à partir des données de la facture.
+      operationId: telechargerFacturePdf
+      responses:
+        '200':
+          description: PDF (attachment FAC-AAAA-NNNN.pdf)
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+  /factures/{id}/statut:
+    parameters:
+      - $ref: '#/components/parameters/FactureId'
+    patch:
+      tags: [Factures]
+      summary: Changer le statut de paiement
+      description: |
+        EN_ATTENTE vers PAYEE ou ANNULEE uniquement ; PAYEE et ANNULEE sont définitifs.
+      operationId: changerStatutFacture
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [statut]
+              properties:
+                statut:
+                  $ref: '#/components/schemas/StatutPaiement'
+      responses:
+        '200':
+          description: Facture mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Facture'
+        '400':
+          $ref: '#/components/responses/DonneesInvalides'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '409':
+          description: Transition interdite ou facture modifiée entre-temps
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+
 components:
   parameters:
+    FactureId:
+      name: id
+      in: path
+      required: true
+      description: Identifiant de la facture
+      schema:
+        type: integer
+        format: int64
     ClientId:
       name: id
       in: path
@@ -274,6 +416,34 @@ components:
               type: string
               example: '901234567'
 
+    StatutPaiement:
+      type: string
+      enum: [EN_ATTENTE, PAYEE, ANNULEE]
+    Facture:
+      type: object
+      description: Facture d'une séance, avec les coordonnées du client et le détail de la prestation copiés à l'émission.
+      properties:
+        id: {type: integer, format: int64}
+        numero: {type: string, example: FAC-2026-0007}
+        dateEmission: {type: string, format: date}
+        montantHT: {type: number, example: 120.00}
+        tauxTVA: {type: number, example: 20.00}
+        montantTTC: {type: number, example: 144.00}
+        statutPaiement:
+          $ref: '#/components/schemas/StatutPaiement'
+        seanceId: {type: integer, format: int64}
+        clientDesignation: {type: string}
+        clientAdresse: {type: string}
+        clientEmail: {type: string}
+        clientSirenTva:
+          type: string
+          nullable: true
+          description: Renseigné seulement pour une entreprise
+        prestationDate: {type: string, format: date}
+        prestationHeure: {type: string, example: '16:00:00'}
+        prestationDuree: {type: integer, description: Durée en minutes}
+        prestationType: {type: string}
+        photographeNom: {type: string}
     Erreur:
       type: object
       description: Corps commun à toutes les réponses en erreur.
