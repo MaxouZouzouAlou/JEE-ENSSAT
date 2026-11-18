@@ -49,18 +49,6 @@ public class FactureDAOImpl implements FactureDAO {
             "UPDATE facture SET statut_paiement = ? WHERE id = ? AND statut_paiement = ?";
     // numéros sur 4 chiffres avec des 0 devant : le MAX alphabétique = le MAX numérique
     private static final String SQL_DERNIER_NUMERO = "SELECT MAX(numero) FROM facture WHERE numero LIKE ?";
-    private static final String SQL_FIND_SEANCE =
-            "SELECT s.id, s.date_seance, s.heure_debut, s.duree_minutes, s.lieu, s.statut,"
-                    + " t.id AS type_id, t.libelle, t.tarif_horaire_ht,"
-                    + " p.id AS photographe_id, p.nom AS photographe_nom, p.email AS photographe_email,"
-                    + " p.actif,"
-                    + " c.id AS client_id, c.type AS client_type, c.adresse_postale, c.email AS client_email,"
-                    + " c.nom, c.prenom, c.raison_sociale, c.siren_tva"
-                    + " FROM seance s"
-                    + " JOIN type_seance t ON t.id = s.type_seance_id"
-                    + " JOIN photographe p ON p.id = s.photographe_id"
-                    + " JOIN client c ON c.id = s.client_id"
-                    + " WHERE s.id = ?";
 
     // code MySQL "duplicate entry" (violation d'une contrainte UNIQUE)
     private static final int MYSQL_ENTREE_DUPLIQUEE = 1062;
@@ -156,19 +144,6 @@ public class FactureDAOImpl implements FactureDAO {
         }
     }
 
-    @Override
-    public Optional<Seance> findSeance(long seanceId) {
-        try (Connection cnx = connexion();
-             PreparedStatement ps = cnx.prepareStatement(SQL_FIND_SEANCE)) {
-            ps.setLong(1, seanceId);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? Optional.of(versSeance(rs)) : Optional.empty();
-            }
-        } catch (SQLException e) {
-            throw new DaoException("Lecture de la séance " + seanceId + " impossible", e);
-        }
-    }
-
     private Optional<Facture> lireUne(String sql, long parametre, String messageErreur) {
         try (Connection cnx = connexion();
              PreparedStatement ps = cnx.prepareStatement(sql)) {
@@ -202,35 +177,6 @@ public class FactureDAOImpl implements FactureDAO {
         f.setPrestationType(rs.getString("prestation_type"));
         f.setPhotographeNom(rs.getString("photographe_nom"));
         return f;
-    }
-
-    private Seance versSeance(ResultSet rs) throws SQLException {
-        Seance s = new Seance();
-        s.setId(rs.getLong("id"));
-        s.setDate(rs.getObject("date_seance", java.time.LocalDate.class));
-        s.setHeureDebut(rs.getTime("heure_debut").toLocalTime());
-        s.setDuree(rs.getInt("duree_minutes"));
-        s.setLieu(rs.getString("lieu"));
-        s.setStatut(StatutSeance.valueOf(rs.getString("statut")));
-        s.setTypeSeance(new TypeSeance(rs.getLong("type_id"), rs.getString("libelle"),
-                rs.getBigDecimal("tarif_horaire_ht")));
-        s.setPhotographe(new Photographe(rs.getLong("photographe_id"), rs.getString("photographe_nom"),
-                rs.getString("photographe_email"), rs.getBoolean("actif")));
-        s.setClient(versClient(rs));
-        return s;
-    }
-
-    // colonnes client de la jointure -> bonne sous-classe selon client.type
-    private Client versClient(ResultSet rs) throws SQLException {
-        long id = rs.getLong("client_id");
-        String adresse = rs.getString("adresse_postale");
-        String email = rs.getString("client_email");
-        return switch (TypeClient.valueOf(rs.getString("client_type"))) {
-            case PARTICULIER -> new ClientParticulier(id, adresse, email,
-                    rs.getString("nom"), rs.getString("prenom"));
-            case ENTREPRISE -> new ClientEntreprise(id, adresse, email,
-                    rs.getString("raison_sociale"), rs.getString("siren_tva"));
-        };
     }
 
     private Connection connexion() {

@@ -4,6 +4,7 @@ import org.glassfish.grizzly.http.server.CLStaticHttpHandler;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
+import fr.enssat.studiophoto.model.SeanceController;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,7 +29,7 @@ public class Main {
                 } catch (Exception e) {
                     LOGGER.log(Level.SEVERE, null, e);
                 }
-            }));
+            }));    
 
             LOGGER.info("Application démarrée. (Faites CTRL+C pour arrêter)");
             Thread.currentThread().join();
@@ -51,8 +52,10 @@ public class Main {
 
         final ResourceConfig rc = new ResourceConfig();
 
-        // on enregistre les ressources (@Path) et les mappers d'erreurs (@Provider)
+        // Ressources du studio photo : toutes les classes @Path du package sont enregistrées,
+        // ainsi que les ExceptionMapper (@Provider) qui convertissent les erreurs en JSON
         rc.packages("fr.enssat.studiophoto.resource", "fr.enssat.studiophoto.exception");
+        rc.register(SeanceController.class);
 
         HttpServer httpServer = GrizzlyHttpServerFactory.createHttpServer(URI.create(apiUri), rc);
 

@@ -2,6 +2,7 @@ package fr.enssat.studiophoto.service;
 
 import fr.enssat.studiophoto.dao.FactureDAO;
 import fr.enssat.studiophoto.dao.FactureDAOImpl;
+import fr.enssat.studiophoto.dao.SeanceDAO;
 import fr.enssat.studiophoto.exception.ConflitException;
 import fr.enssat.studiophoto.exception.RequeteInvalideException;
 import fr.enssat.studiophoto.exception.IntrouvableException;
@@ -25,15 +26,17 @@ public class FactureService {
     private static final int MAX_NUMERO_ANNUEL = 9999;
 
     private final FactureDAO factureDAO;
+    private final SeanceDAO seanceDAO;
     private final Clock horloge;
 
     public FactureService() {
-        this(new FactureDAOImpl(), Clock.systemDefaultZone());
+        this(new FactureDAOImpl(), new SeanceDAO(), Clock.systemDefaultZone());
     }
 
     // pour les tests : DAO mocké et date fixée
-    public FactureService(FactureDAO factureDAO, Clock horloge) {
+    public FactureService(FactureDAO factureDAO, SeanceDAO seanceDAO, Clock horloge) {
         this.factureDAO = factureDAO;
+        this.seanceDAO = seanceDAO;
         this.horloge = horloge;
     }
 
@@ -42,7 +45,7 @@ public class FactureService {
      * 404 si la séance n'existe pas, 409 si elle n'est pas terminée ou déja facturée.
      */
     public Facture generer(long seanceId) {
-        Seance seance = factureDAO.findSeance(seanceId)
+        Seance seance = seanceDAO.findByFilters(seanceId, null, null, null).stream().findFirst()
                 .orElseThrow(() -> new IntrouvableException("Séance", seanceId));
         if (seance.getStatut() != StatutSeance.TERMINEE) {
             throw new ConflitException("La séance " + seanceId + " est " + seance.getStatut()

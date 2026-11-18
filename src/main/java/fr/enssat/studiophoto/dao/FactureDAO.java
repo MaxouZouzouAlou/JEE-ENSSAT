@@ -32,7 +32,4 @@ public interface FactureDAO {
 
     /** plus grand numéro de l'année (ex FAC-2026-0007), vide si aucune facutre */
     Optional<String> findDernierNumero(int annee);
-
-    /** séance avec son type, son photographe et son client, en lecture seule (sert à facturer) */
-    Optional<Seance> findSeance(long seanceId);
 }

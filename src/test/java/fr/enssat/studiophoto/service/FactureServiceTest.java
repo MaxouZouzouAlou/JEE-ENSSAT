@@ -1,6 +1,7 @@
 package fr.enssat.studiophoto.service;
 
 import fr.enssat.studiophoto.dao.FactureDAO;
+import fr.enssat.studiophoto.dao.SeanceDAO;
 import fr.enssat.studiophoto.exception.ConflitException;
 import fr.enssat.studiophoto.exception.RequeteInvalideException;
 import fr.enssat.studiophoto.exception.IntrouvableException;
@@ -54,6 +55,9 @@ class FactureServiceTest {
     @Mock
     private FactureDAO factureDAO;
 
+    @Mock
+    private SeanceDAO seanceDAO;
+
     private FactureService service;
 
     @BeforeEach
@@ -63,7 +67,7 @@ class FactureServiceTest {
 
     private FactureService serviceLeJour(LocalDate jour) {
         Clock horloge = Clock.fixed(jour.atTime(10, 0).atZone(PARIS).toInstant(), PARIS);
-        return new FactureService(factureDAO, horloge);
+        return new FactureService(factureDAO, seanceDAO, horloge);
     }
 
     private static ClientParticulier particulier() {
@@ -77,12 +81,8 @@ class FactureServiceTest {
 
     // séance de 90 min à 80 euros/h : 120,00 HT / 144,00 TTC
     private static Seance seance(StatutSeance statut, Client client) {
-        Seance seance = new Seance();
-        seance.setId(9L);
-        seance.setDate(LocalDate.of(2026, 11, 5));
-        seance.setHeureDebut(LocalTime.of(16, 0));
-        seance.setDuree(90);
-        seance.setStatut(statut);
+        Seance seance = new Seance(9L, java.sql.Date.valueOf(LocalDate.of(2026, 11, 5)),
+                java.sql.Time.valueOf(LocalTime.of(16, 0)), 90, "Studio", statut);
         seance.setTypeSeance(new TypeSeance(1L, "Portrait", new BigDecimal("80.00")));
         seance.setPhotographe(new Photographe(2L, "Alice Martin", "alice@studio.example", true));
         seance.setClient(client);
@@ -99,7 +99,7 @@ class FactureServiceTest {
 
     // séance TERMINEE pas encore facturée, create renvoie la facture qu'on lui donne
     private void preparerGeneration(Client client) {
-        when(factureDAO.findSeance(9L)).thenReturn(Optional.of(seance(StatutSeance.TERMINEE, client)));
+        when(seanceDAO.findByFilters(9L, null, null, null)).thenReturn(List.of(seance(StatutSeance.TERMINEE, client)));
         when(factureDAO.findBySeanceId(9L)).thenReturn(Optional.empty());
         when(factureDAO.create(any(Facture.class))).then(returnsFirstArg());
     }
@@ -124,7 +124,7 @@ class FactureServiceTest {
 
         @Test
         void refuseUneSeanceInconnue() {
-            when(factureDAO.findSeance(404L)).thenReturn(Optional.empty());
+            when(seanceDAO.findByFilters(404L, null, null, null)).thenReturn(List.of());
 
             assertThrows(IntrouvableException.class, () -> service.generer(404L));
             verify(factureDAO, never()).create(any());
@@ -133,7 +133,7 @@ class FactureServiceTest {
         @ParameterizedTest
         @EnumSource(value = StatutSeance.class, names = {"PLANIFIEE", "CONFIRMEE", "ANNULEE"})
         void refuseUneSeanceNonTerminee(StatutSeance statut) {
-            when(factureDAO.findSeance(9L)).thenReturn(Optional.of(seance(statut, particulier())));
+            when(seanceDAO.findByFilters(9L, null, null, null)).thenReturn(List.of(seance(statut, particulier())));
 
             ConflitException e = assertThrows(ConflitException.class, () -> service.generer(9L));
 
@@ -143,7 +143,7 @@ class FactureServiceTest {
 
         @Test
         void refuseUneSeanceDejaFacturee() {
-            when(factureDAO.findSeance(9L)).thenReturn(Optional.of(seance(StatutSeance.TERMINEE, particulier())));
+            when(seanceDAO.findByFilters(9L, null, null, null)).thenReturn(List.of(seance(StatutSeance.TERMINEE, particulier())));
             when(factureDAO.findBySeanceId(9L)).thenReturn(Optional.of(facture(StatutPaiement.PAYEE)));
 
             assertThrows(ConflitException.class, () -> service.generer(9L));
@@ -192,7 +192,7 @@ class FactureServiceTest {
 
         @Test
         void refuseQuandLesNeufMilleNeufCentQuatreVingtDixNeufNumerosSontPris() {
-            when(factureDAO.findSeance(9L)).thenReturn(Optional.of(seance(StatutSeance.TERMINEE, particulier())));
+            when(seanceDAO.findByFilters(9L, null, null, null)).thenReturn(List.of(seance(StatutSeance.TERMINEE, particulier())));
             when(factureDAO.findBySeanceId(9L)).thenReturn(Optional.empty());
             when(factureDAO.findDernierNumero(2026)).thenReturn(Optional.of("FAC-2026-9999"));
 
@@ -202,7 +202,7 @@ class FactureServiceTest {
 
         @Test
         void rejoueAvecLeNumeroSuivantSiUneAutreFactureAPrisLeMien() {
-            when(factureDAO.findSeance(9L)).thenReturn(Optional.of(seance(StatutSeance.TERMINEE, particulier())));
+            when(seanceDAO.findByFilters(9L, null, null, null)).thenReturn(List.of(seance(StatutSeance.TERMINEE, particulier())));
             when(factureDAO.findBySeanceId(9L)).thenReturn(Optional.empty());
             when(factureDAO.findDernierNumero(2026))
                     .thenReturn(Optional.of("FAC-2026-0003"), Optional.of("FAC-2026-0004"));
@@ -218,7 +218,7 @@ class FactureServiceTest {
 
         @Test
         void neRejoueQueTroisFois() {
-            when(factureDAO.findSeance(9L)).thenReturn(Optional.of(seance(StatutSeance.TERMINEE, particulier())));
+            when(seanceDAO.findByFilters(9L, null, null, null)).thenReturn(List.of(seance(StatutSeance.TERMINEE, particulier())));
             when(factureDAO.findBySeanceId(9L)).thenReturn(Optional.empty());
             when(factureDAO.findDernierNumero(2026)).thenReturn(Optional.empty());
             when(factureDAO.create(any(Facture.class))).thenThrow(new ConflitException("numéro déjà pris"));
@@ -229,7 +229,7 @@ class FactureServiceTest {
 
         @Test
         void neRejoueAsPasSiLaSeanceAEteFactureeEntreTemps() {
-            when(factureDAO.findSeance(9L)).thenReturn(Optional.of(seance(StatutSeance.TERMINEE, particulier())));
+            when(seanceDAO.findByFilters(9L, null, null, null)).thenReturn(List.of(seance(StatutSeance.TERMINEE, particulier())));
             // pas facturée au premier contrôle, mais facturée par quelqu'un d'autre quand l'insert échou
             when(factureDAO.findBySeanceId(9L))
                     .thenReturn(Optional.empty(), Optional.of(facture(StatutPaiement.EN_ATTENTE)));

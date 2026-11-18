@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Documentation de l'API – Studio photo</title>
+    <!-- Swagger UI 5.17.14 (swagger-ui-dist, licence Apache 2.0 : voir LICENSE),
+         copié tel quel pour fonctionner sans connexion internet ni dépendance Java -->
+    <link rel="stylesheet" href="swagger-ui.css">
+    <link rel="icon" type="image/png" href="favicon-32x32.png">
+    <style>
+        body { margin: 0; }
+        .retour { display: block; padding: 10px 20px; background: #1f5f8b; color: #fff; font-family: system-ui, sans-serif; text-decoration: none; }
+    </style>
+</head>
+<body>
+<a class="retour" href="../index.html">← Retour au site Studio photo</a>
+<div id="swagger-ui"></div>
+<script src="swagger-ui-bundle.js"></script>
+<script>
+    // La description de l'API est le fichier statique /openapi.yaml (à tenir à jour quand une route change)
+    window.ui = SwaggerUIBundle({
+        url: '../openapi.yaml',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        docExpansion: 'list',
+        defaultModelsExpandDepth: 1,
+        tryItOutEnabled: false
+    });
+</script>
+</body>
+</html>

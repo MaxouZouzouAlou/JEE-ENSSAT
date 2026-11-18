@@ -7,7 +7,10 @@ import jakarta.ws.rs.ext.Provider;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/** 500 : le détail va dans les logs, le client reçoit juste un message générique */
+/**
+ * Erreur d'accès à la base : 500. Le détail technique est écrit dans les logs
+ * du serveur mais n'est pas envoyé au client.
+ */
 @Provider
 public class DaoExceptionMapper implements ExceptionMapper<DaoException> {
 
@@ -16,7 +19,7 @@ public class DaoExceptionMapper implements ExceptionMapper<DaoException> {
     @Override
     public Response toResponse(DaoException exception) {
         LOGGER.log(Level.SEVERE, exception.getMessage(), exception);
-        return ErreurJson.reponse(Response.Status.INTERNAL_SERVER_ERROR,
+        return ErreurReponse.creer(Response.Status.INTERNAL_SERVER_ERROR,
                 "Erreur d'accès aux données, réessayez plus tard.");
     }
 }

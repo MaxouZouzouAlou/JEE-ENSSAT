@@ -55,13 +55,15 @@
             <version>${openpdf.version}</version>
         </dependency>
 
-        <!-- tests -->
+        <!-- Tests unitaires de la couche service -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Simulation des DAO dans les tests (pas d'accès à la base) -->
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
@@ -79,13 +81,28 @@
                 <version>3.16.0</version>
             </plugin>
 
-            <!-- surefire pour "mvn test" ; le flag est là pour que mockito marche sur le JDK 25 -->
+            <!-- Fournit le chemin du jar Mockito (propriété ${org.mockito:mockito-core:jar}) à Surefire -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.8.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Surefire : lance les tests JUnit 5 avec "mvn test".
+                 Mockito est chargé comme agent Java, comme l'exigent les JDK récents. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.4</version>
                 <configuration>
-                    <argLine>-XX:+EnableDynamicAgentLoading</argLine>
+                    <argLine>-javaagent:${org.mockito:mockito-core:jar} -Xshare:off</argLine>
                 </configuration>
             </plugin>
 

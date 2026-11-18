@@ -84,6 +84,9 @@ Attendre le message « Application démarrée. (Faites CTRL+C pour arrêter) »,
 | --- | --- |
 | Front (page d'accueil) | http://localhost:8080/ |
 | API REST | http://localhost:8080/api/... (ex. `/api/photographes`) |
+| Documentation de l'API (Swagger UI) | http://localhost:8080/swagger/ |
+
+La documentation est générée à partir de `src/main/resources/static/openapi.yaml` : à mettre à jour quand une route est ajoutée ou modifiée.
 
 `CTRL+C` arrête le serveur.
 
@@ -97,8 +100,11 @@ Après une modification :
 ```bash
 curl http://localhost:8080/api/photographes
 curl -X POST http://localhost:8080/api/clients -H "Content-Type: application/json" -d '{"type":"PARTICULIER","nom":"Bernard","prenom":"Julie","adressePostale":"12 rue des Lilas, 22300 Lannion","email":"julie@mail.example"}'
+curl -X POST http://localhost:8080/api/seances -H "Content-Type: application/json" -d '{"date":"2026-11-18","heureDebut":"14:00:00","duree":"90","lieu":"Lannion","typeSeanceId":"1","photographeId":"1","clientId":"1","clientType":"PARTICULIER"}'
 curl -X PATCH http://localhost:8080/api/seances/13/statut -H "Content-Type: application/json" -d '{"statut":"CONFIRMEE"}'
 ```
+
+Pour créer une séance, remplacer les identifiants par ceux de types, photographes actifs et clients présents en base.
 
 ## 4. Compiler et tester
 
