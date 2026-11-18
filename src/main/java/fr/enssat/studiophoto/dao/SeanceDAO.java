@@ -2,10 +2,12 @@ package fr.enssat.studiophoto.dao;
 
 import java.sql.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import fr.enssat.studiophoto.DBManager;
+import fr.enssat.studiophoto.exception.DaoException;
 import fr.enssat.studiophoto.model.*;
 
 public class SeanceDAO {
@@ -291,5 +293,69 @@ public class SeanceDAO {
         } finally {
             DBManager.getInstance().cleanup(connection, statement, null);
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Méthodes utilisées par le lot 1 (désactivation et suppression d'un photographe).
+    // Une séance « à venir » est PLANIFIEE ou CONFIRMEE et commence strictement après
+    // l'instant donné ; l'instant est un paramètre pour que le service reste testable.
+    // ------------------------------------------------------------------
+
+    /** Condition « séance à venir » : statut actif et début (date + heure) après l'instant donné. */
+    private static final String A_VENIR =
+            " AND statut IN ('PLANIFIEE', 'CONFIRMEE') AND TIMESTAMP(date_seance, heure_debut) > ?";
+
+    /** Nombre total de séances d'un photographe, tous statuts et toutes dates confondus. */
+    public int compterParPhotographe(long photographeId) {
+        String sql = "SELECT COUNT(*) FROM seance WHERE photographe_id = ?";
+        try (Connection c = connexionLot1(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, photographeId);
+            return lireNombre(ps);
+        } catch (SQLException e) {
+            throw new DaoException("Impossible de compter les séances du photographe " + photographeId, e);
+        }
+    }
+
+    /** Nombre de séances à venir (PLANIFIEE ou CONFIRMEE, début après {@code maintenant}) d'un photographe. */
+    public int compterAVenirParPhotographe(long photographeId, LocalDateTime maintenant) {
+        String sql = "SELECT COUNT(*) FROM seance WHERE photographe_id = ?" + A_VENIR;
+        try (Connection c = connexionLot1(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, photographeId);
+            ps.setObject(2, maintenant);
+            return lireNombre(ps);
+        } catch (SQLException e) {
+            throw new DaoException("Impossible de compter les séances à venir du photographe " + photographeId, e);
+        }
+    }
+
+    /**
+     * Passe en ANNULEE les séances à venir d'un photographe. Les séances passées,
+     * terminées ou déjà annulées ne sont pas modifiées.
+     *
+     * @return le nombre de séances annulées
+     */
+    public int annulerAVenirParPhotographe(long photographeId, LocalDateTime maintenant) {
+        String sql = "UPDATE seance SET statut = 'ANNULEE' WHERE photographe_id = ?" + A_VENIR;
+        try (Connection c = connexionLot1(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, photographeId);
+            ps.setObject(2, maintenant);
+            return ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new DaoException("Impossible d'annuler les séances à venir du photographe " + photographeId, e);
+        }
+    }
+
+    private static int lireNombre(PreparedStatement ps) throws SQLException {
+        try (ResultSet rs = ps.executeQuery()) {
+            return rs.next() ? rs.getInt(1) : 0;
+        }
+    }
+
+    private static Connection connexionLot1() {
+        Connection c = DBManager.getInstance().getConnection();
+        if (c == null) {
+            throw new DaoException("Connexion à la base de données impossible.");
+        }
+        return c;
     }
 }

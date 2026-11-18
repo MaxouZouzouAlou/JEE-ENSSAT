@@ -5,6 +5,9 @@ info:
   description: |
     API de gestion d'un studio de photographie (photographes, clients, séances, factures).
 
+    Dans un corps de requête, un objet lié (ex. une spécialité) est donné par son identifiant :
+    `{"id": 2}` ; les réponses renvoient l'objet complet.
+
     **Erreurs** : toutes les réponses en erreur ont le même corps JSON (schéma `Erreur`),
     dont le champ `message` est affiché tel quel par le front.
 
@@ -22,12 +25,155 @@ servers:
   - url: /api
     description: Serveur local (http://localhost:8080/api)
 tags:
+  - name: Photographes
+    description: Photographes et spécialités (lot 1)
   - name: Clients
     description: Clients particuliers et entreprises
   - name: Factures
     description: Facturation des séances terminées, statut de paiement et export PDF
 
 paths:
+  /photographes:
+    get:
+      tags: [Photographes]
+      summary: Lister les photographes (triés par nom)
+      parameters:
+        - name: actif
+          in: query
+          description: "true : actifs seulement (listes déroulantes des séances) ; false : inactifs ; absent : tous"
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Liste des photographes
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Photographe' } }
+    post:
+      tags: [Photographes]
+      summary: Créer un photographe (toujours actif)
+      description: Nom obligatoire ; email obligatoire, valide et unique (sans tenir compte de la casse, enregistré en minuscules).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PhotographeEntree' }
+      responses:
+        '201':
+          description: Photographe créé
+          headers:
+            Location: { schema: { type: string }, description: URL du photographe créé }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Photographe' }
+        '400': { $ref: '#/components/responses/DonneesInvalides' }
+        '409':
+          description: Email déjà utilisé par un autre photographe
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+
+  /photographes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/PhotographeId'
+    get:
+      tags: [Photographes]
+      summary: Détail d'un photographe
+      responses:
+        '200':
+          description: Photographe
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Photographe' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+    put:
+      tags: [Photographes]
+      summary: Modifier nom, email et spécialités
+      description: Le champ `actif` est ignoré ; le statut se change par `PATCH /photographes/{id}/statut`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PhotographeEntree' }
+      responses:
+        '200':
+          description: Photographe modifié
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Photographe' }
+        '400': { $ref: '#/components/responses/DonneesInvalides' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409':
+          description: Email déjà utilisé par un autre photographe
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+    delete:
+      tags: [Photographes]
+      summary: Supprimer un photographe sans séance
+      description: Refusé (409) dès que le photographe a au moins une séance, même passée ou annulée ; il faut alors le désactiver.
+      responses:
+        '204': { description: Photographe supprimé }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409':
+          description: Le photographe a des séances
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+
+  /photographes/{id}/statut:
+    parameters:
+      - $ref: '#/components/parameters/PhotographeId'
+    patch:
+      tags: [Photographes]
+      summary: Activer ou désactiver un photographe
+      description: |
+        Désactivation d'un photographe qui a des séances à venir (PLANIFIEE ou CONFIRMEE,
+        début dans le futur) : sans `confirmer=true`, réponse 409 avec `nombreSeances` et
+        rien ne change ; avec `confirmer=true`, le photographe est désactivé et ces séances
+        passent en ANNULEE. Les séances passées ne sont jamais modifiées.
+      parameters:
+        - name: confirmer
+          in: query
+          description: true pour accepter l'annulation des séances à venir
+          schema: { type: boolean, default: false }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actif]
+              properties:
+                actif: { type: boolean, example: false }
+      responses:
+        '200':
+          description: Statut changé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  photographe: { $ref: '#/components/schemas/Photographe' }
+                  seancesAnnulees: { type: integer, example: 2, description: Séances à venir passées en ANNULEE }
+        '400': { $ref: '#/components/responses/DonneesInvalides' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409':
+          description: Confirmation requise (séances à venir)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErreurConfirmation' }
+
+  /specialites:
+    get:
+      tags: [Photographes]
+      summary: Lister les spécialités (liste fixe)
+      responses:
+        '200':
+          description: Reportage, Mariage et fêtes, Famille
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Specialite' } }
+
   /clients:
     get:
       tags: [Clients]
@@ -274,6 +420,15 @@ paths:
 
 components:
   parameters:
+    PhotographeId:
+      name: id
+      in: path
+      required: true
+      description: Identifiant du photographe
+      schema:
+        type: integer
+        format: int64
+        example: 1
     FactureId:
       name: id
       in: path
@@ -318,6 +473,46 @@ components:
                 email: contact@horizon-evenements.example
 
   schemas:
+    # ---------- Lot 1 : photographes ----------
+    ErreurConfirmation:
+      description: Erreur 409 qui peut être levée en renvoyant la requête avec `confirmer=true`
+      allOf:
+        - $ref: '#/components/schemas/Erreur'
+        - type: object
+          properties:
+            nombreSeances: { type: integer, example: 2, description: Nombre de séances qui seront annulées }
+
+    Reference:
+      type: object
+      description: Objet lié donné par son identifiant
+      required: [id]
+      properties:
+        id: { type: integer, format: int64, example: 1 }
+
+    Specialite:
+      type: object
+      properties:
+        id: { type: integer, format: int64, example: 2 }
+        libelle: { type: string, example: Mariage et fêtes }
+    Photographe:
+      type: object
+      properties:
+        id: { type: integer, format: int64, example: 1 }
+        nom: { type: string, example: Alice Martin }
+        email: { type: string, example: alice.martin@studio.example }
+        actif: { type: boolean, example: true }
+        specialites: { type: array, items: { $ref: '#/components/schemas/Specialite' } }
+    PhotographeEntree:
+      type: object
+      required: [nom, email]
+      properties:
+        nom: { type: string, maxLength: 100, example: Alice Martin }
+        email: { type: string, maxLength: 150, example: alice.martin@studio.example }
+        specialites:
+          type: array
+          items: { $ref: '#/components/schemas/Reference' }
+          example: [{ id: 2 }, { id: 3 }]
+
     TypeClient:
       type: string
       enum: [PARTICULIER, ENTREPRISE]

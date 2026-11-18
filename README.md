@@ -114,7 +114,16 @@ mvn test            # lancer les tests unitaires
 mvn package         # construire le jar dans target/
 ```
 
-## 5. Git (une branche par lot)
+## 5. Documentation du projet
+
+| Quoi | Où |
+| --- | --- |
+| Contrat de l'API (OpenAPI) | `src/main/resources/static/openapi.yaml` |
+| Choix techniques et format d'erreur (phase 0) | `docs/choix-techniques.md` |
+| Lot 1 – photographes : règles et choix | `docs/lot1-photographes.md` |
+| Rapport technique | `livrables/rapport_technique.md` |
+
+## 6. Git (une branche par lot)
 
 ```bash
 git pull                              # récupérer le travail des autres
