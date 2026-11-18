@@ -13,6 +13,8 @@
         <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jersey.version>4.0.2</jersey.version>
+        <junit.version>5.13.4</junit.version>
+        <mockito.version>5.20.0</mockito.version>
     </properties>
 
     <dependencies>
@@ -44,6 +46,22 @@
             <version>26.7.0</version>
             <scope>compile</scope>
         </dependency>
+
+        <!-- Tests unitaires de la couche service -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Simulation des DAO dans les tests (pas d'accès à la base) -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -53,6 +71,31 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.16.0</version>
+            </plugin>
+
+            <!-- Fournit le chemin du jar Mockito (propriété ${org.mockito:mockito-core:jar}) à Surefire -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.8.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Surefire : lance les tests JUnit 5 avec "mvn test".
+                 Mockito est chargé comme agent Java, comme l'exigent les JDK récents. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.4</version>
+                <configuration>
+                    <argLine>-javaagent:${org.mockito:mockito-core:jar} -Xshare:off</argLine>
+                </configuration>
             </plugin>
 
             <!-- Exec Plugin: Allows you to run the app using "mvn exec:java" -->

@@ -1,0 +1,330 @@
+openapi: 3.0.3
+info:
+  title: Studio photo – API REST
+  version: 1.0.0
+  description: |
+    API de gestion d'un studio de photographie (photographes, clients, séances, factures).
+
+    **Erreurs** : toutes les réponses en erreur ont le même corps JSON (schéma `Erreur`),
+    dont le champ `message` est affiché tel quel par le front.
+
+    | Code | Signification |
+    | --- | --- |
+    | 400 | Données invalides ou JSON illisible |
+    | 404 | Élément ou route introuvable |
+    | 405 | Méthode HTTP non autorisée sur la route |
+    | 409 | Action impossible dans l'état actuel des données (règle métier) |
+    | 415 | Corps envoyé dans un autre format que JSON |
+    | 500 | Erreur d'accès à la base de données |
+
+    Ce fichier est à tenir à jour par chaque lot quand une route est ajoutée ou modifiée.
+servers:
+  - url: /api
+    description: Serveur local (http://localhost:8080/api)
+tags:
+  - name: Clients
+    description: Clients particuliers et entreprises
+
+paths:
+  /clients:
+    get:
+      tags: [Clients]
+      summary: Lister les clients
+      description: Tous les clients, particuliers et entreprises, triés par identifiant.
+      operationId: listerClients
+      responses:
+        '200':
+          description: Liste des clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Client'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+    post:
+      tags: [Clients]
+      summary: Créer un client
+      description: |
+        Le champ `type` choisit le type de client ; seuls les champs de ce type sont pris en compte.
+        Les espaces superflus sont retirés et le numéro SIREN/TVA est normalisé
+        (`fr 12 902 345 678` devient `FR12902345678`).
+      operationId: creerClient
+      requestBody:
+        $ref: '#/components/requestBodies/ClientRequete'
+      responses:
+        '201':
+          description: Client créé
+          headers:
+            Location:
+              description: URL du client créé
+              schema:
+                type: string
+                example: http://localhost:8080/api/clients/8
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '400':
+          $ref: '#/components/responses/DonneesInvalides'
+        '415':
+          $ref: '#/components/responses/FormatNonSupporte'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+
+  /clients/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ClientId'
+    get:
+      tags: [Clients]
+      summary: Consulter un client
+      operationId: trouverClient
+      responses:
+        '200':
+          description: Le client
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+    put:
+      tags: [Clients]
+      summary: Modifier un client
+      description: |
+        Remplace toutes les données du client. Le type peut changer (particulier ↔ entreprise) :
+        les champs de l'ancien type sont alors effacés.
+      operationId: modifierClient
+      requestBody:
+        $ref: '#/components/requestBodies/ClientRequete'
+      responses:
+        '200':
+          description: Client modifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '400':
+          $ref: '#/components/responses/DonneesInvalides'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '415':
+          $ref: '#/components/responses/FormatNonSupporte'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+    delete:
+      tags: [Clients]
+      summary: Supprimer un client
+      description: Refusé (409) si le client a au moins une séance, quel que soit son statut.
+      operationId: supprimerClient
+      responses:
+        '204':
+          description: Client supprimé
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '409':
+          description: Le client a des séances
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+              example:
+                status: 409
+                erreur: Conflict
+                message: 'Impossible de supprimer ce client : il a 2 séances enregistrées.'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+
+components:
+  parameters:
+    ClientId:
+      name: id
+      in: path
+      required: true
+      description: Identifiant du client
+      schema:
+        type: integer
+        format: int64
+        example: 5
+
+  requestBodies:
+    ClientRequete:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ClientRequete'
+          examples:
+            particulier:
+              summary: Client particulier
+              value:
+                type: PARTICULIER
+                nom: Bernard
+                prenom: Julie
+                adressePostale: 12 rue des Lilas, 22300 Lannion
+                email: julie.bernard@mail.example
+            entreprise:
+              summary: Client entreprise
+              value:
+                type: ENTREPRISE
+                raisonSociale: Agence Horizon Événements
+                sirenTva: '901234567'
+                adressePostale: 15 boulevard de la Mer, 22300 Lannion
+                email: contact@horizon-evenements.example
+
+  schemas:
+    TypeClient:
+      type: string
+      enum: [PARTICULIER, ENTREPRISE]
+
+    ClientRequete:
+      type: object
+      description: |
+        Corps unique pour les deux types de client. Champs obligatoires selon `type` :
+        - tous : `adressePostale`, `email` (adresse email valide) ;
+        - `PARTICULIER` : `nom`, `prenom` ;
+        - `ENTREPRISE` : `raisonSociale`, `sirenTva` (9 chiffres, ou FR + 11 caractères).
+
+        Les champs de l'autre type sont ignorés. Toutes les erreurs de validation
+        sont renvoyées ensemble dans un seul message (400).
+      required: [type, adressePostale, email]
+      properties:
+        type:
+          $ref: '#/components/schemas/TypeClient'
+        adressePostale:
+          type: string
+          maxLength: 255
+        email:
+          type: string
+          format: email
+          maxLength: 150
+        nom:
+          type: string
+          maxLength: 100
+          description: Particulier uniquement
+        prenom:
+          type: string
+          maxLength: 100
+          description: Particulier uniquement
+        raisonSociale:
+          type: string
+          maxLength: 150
+          description: Entreprise uniquement
+        sirenTva:
+          type: string
+          maxLength: 20
+          description: Entreprise uniquement – SIREN (9 chiffres) ou TVA intracommunautaire française
+          example: FR12902345678
+
+    Client:
+      description: Client renvoyé par l'API ; le champ `type` indique lequel des deux schémas s'applique.
+      oneOf:
+        - $ref: '#/components/schemas/ClientParticulier'
+        - $ref: '#/components/schemas/ClientEntreprise'
+      discriminator:
+        propertyName: type
+        mapping:
+          PARTICULIER: '#/components/schemas/ClientParticulier'
+          ENTREPRISE: '#/components/schemas/ClientEntreprise'
+
+    ClientCommun:
+      type: object
+      required: [id, type, adressePostale, email]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        type:
+          $ref: '#/components/schemas/TypeClient'
+        adressePostale:
+          type: string
+          example: 12 rue des Lilas, 22300 Lannion
+        email:
+          type: string
+          format: email
+          example: julie.bernard@mail.example
+
+    ClientParticulier:
+      allOf:
+        - $ref: '#/components/schemas/ClientCommun'
+        - type: object
+          required: [nom, prenom]
+          properties:
+            nom:
+              type: string
+              example: Bernard
+            prenom:
+              type: string
+              example: Julie
+
+    ClientEntreprise:
+      allOf:
+        - $ref: '#/components/schemas/ClientCommun'
+        - type: object
+          required: [raisonSociale, sirenTva]
+          properties:
+            raisonSociale:
+              type: string
+              example: Agence Horizon Événements
+            sirenTva:
+              type: string
+              example: '901234567'
+
+    Erreur:
+      type: object
+      description: Corps commun à toutes les réponses en erreur.
+      required: [status, erreur, message]
+      properties:
+        status:
+          type: integer
+          example: 404
+        erreur:
+          type: string
+          description: Libellé standard du code HTTP
+          example: Not Found
+        message:
+          type: string
+          description: Message en français, affiché par le front
+          example: Client 42 introuvable.
+
+  responses:
+    DonneesInvalides:
+      description: Données invalides ou JSON illisible
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erreur'
+          example:
+            status: 400
+            erreur: Bad Request
+            message: L'email n'est pas valide. Le prénom est obligatoire.
+    Introuvable:
+      description: Élément introuvable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erreur'
+          example:
+            status: 404
+            erreur: Not Found
+            message: Client 42 introuvable.
+    FormatNonSupporte:
+      description: Le corps n'est pas envoyé en JSON
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erreur'
+    ErreurServeur:
+      description: Erreur d'accès à la base de données
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erreur'
+          example:
+            status: 500
+            erreur: Internal Server Error
+            message: Erreur d'accès aux données, réessayez plus tard.
