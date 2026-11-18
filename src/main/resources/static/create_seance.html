@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-cache">
+    <title>Nouvelle séance – Studio photo</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/create_seance.js"></script>
+</head>
+<body data-rubrique="seances.html">
+<header id="entete"></header>
+
+<main>
+    <div id="messages"></div>
+    <h1>Nouvelle séance</h1>
+    <div id="contenu">
+        <form id="formulaire-seance" class="carte" hidden>
+            <label for="date">Date</label>
+            <input id="date" name="date" type="date" required>
+
+            <label for="heureDebut">Heure de début</label>
+            <input id="heureDebut" name="heureDebut" type="time" required>
+
+            <label for="duree">Durée (minutes)</label>
+            <input id="duree" name="duree" type="number" min="1" required>
+
+            <label for="lieu">Lieu</label>
+            <input id="lieu" name="lieu" type="text" maxlength="255" required>
+
+            <label for="typeSeanceId">Type de séance</label>
+            <select id="typeSeanceId" name="typeSeanceId" required></select>
+
+            <label for="photographeId">Photographe</label>
+            <select id="photographeId" name="photographeId" required></select>
+
+            <label for="clientId">Client</label>
+            <select id="clientId" name="clientId" required></select>
+            <input id="clientType" name="clientType" type="hidden">
+
+            <div class="actions">
+                <button type="submit">Créer la séance</button>
+                <a class="bouton-lien secondaire" href="seances.html">Annuler</a>
+            </div>
+        </form>
+    </div>
+</main>
+</body>
+</html>
