@@ -54,6 +54,22 @@ class ExceptionMapperTest {
     }
 
     @Test
+    void messageExpliciteDUneRessourceEstConserve() {
+        Response reponse = new WebApplicationExceptionMapper().toResponse(
+                new jakarta.ws.rs.BadRequestException("Les dates doivent être au format YYYY-MM-DD."));
+
+        assertEquals(400, reponse.getStatus());
+        assertEquals("Les dates doivent être au format YYYY-MM-DD.", ((ErreurReponse) reponse.getEntity()).getMessage());
+    }
+
+    @Test
+    void messageParDefautQuandJerseyNEnDonnePas() {
+        Response reponse = new WebApplicationExceptionMapper().toResponse(new NotFoundException());
+
+        assertEquals("Ressource introuvable.", ((ErreurReponse) reponse.getEntity()).getMessage());
+    }
+
+    @Test
     void erreurJerseyGardeSonCode() {
         WebApplicationExceptionMapper mapper = new WebApplicationExceptionMapper();
 

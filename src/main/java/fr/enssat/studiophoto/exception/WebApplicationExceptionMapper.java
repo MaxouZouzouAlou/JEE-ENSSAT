@@ -16,13 +16,25 @@ public class WebApplicationExceptionMapper implements ExceptionMapper<WebApplica
     @Override
     public Response toResponse(WebApplicationException exception) {
         Response.StatusType statut = exception.getResponse().getStatusInfo();
-        String message = switch (statut.getStatusCode()) {
+        return ErreurReponse.creer(statut, message(exception, statut.getStatusCode()));
+    }
+
+    /**
+     * Message écrit par le développeur (ex. {@code new BadRequestException("Les dates doivent...")})
+     * s'il y en a un ; sinon message par défaut selon le code. Jersey met "HTTP 404 Not Found"
+     * comme message quand aucun n'est fourni.
+     */
+    static String message(WebApplicationException exception, int code) {
+        String message = exception.getMessage();
+        if (message != null && !message.isBlank() && !message.startsWith("HTTP " + code)) {
+            return message;
+        }
+        return switch (code) {
             case 400 -> "Requête invalide : vérifiez le format JSON envoyé.";
             case 404 -> "Ressource introuvable.";
             case 405 -> "Méthode HTTP non autorisée sur cette ressource.";
             case 415 -> "Format non pris en charge : envoyez du JSON (Content-Type: application/json).";
-            default -> statut.getReasonPhrase();
+            default -> exception.getResponse().getStatusInfo().getReasonPhrase();
         };
-        return ErreurReponse.creer(statut, message);
     }
 }
