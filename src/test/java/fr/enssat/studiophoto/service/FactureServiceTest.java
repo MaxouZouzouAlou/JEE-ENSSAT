@@ -3,8 +3,8 @@ package fr.enssat.studiophoto.service;
 import fr.enssat.studiophoto.dao.FactureDAO;
 import fr.enssat.studiophoto.dao.SeanceDAO;
 import fr.enssat.studiophoto.exception.ConflitException;
-import fr.enssat.studiophoto.exception.RequeteInvalideException;
-import fr.enssat.studiophoto.exception.IntrouvableException;
+import fr.enssat.studiophoto.exception.DonneesInvalidesException;
+import fr.enssat.studiophoto.exception.RessourceIntrouvableException;
 import fr.enssat.studiophoto.model.Client;
 import fr.enssat.studiophoto.model.ClientEntreprise;
 import fr.enssat.studiophoto.model.ClientParticulier;
@@ -126,7 +126,7 @@ class FactureServiceTest {
         void refuseUneSeanceInconnue() {
             when(seanceDAO.findByFilters(404L, null, null, null)).thenReturn(List.of());
 
-            assertThrows(IntrouvableException.class, () -> service.generer(404L));
+            assertThrows(RessourceIntrouvableException.class, () -> service.generer(404L));
             verify(factureDAO, never()).create(any());
         }
 
@@ -343,7 +343,7 @@ class FactureServiceTest {
 
         @Test
         void refuseUnStatutAbsent() {
-            assertThrows(RequeteInvalideException.class, () -> service.changerStatut(5L, null));
+            assertThrows(DonneesInvalidesException.class, () -> service.changerStatut(5L, null));
             verify(factureDAO, never()).updateStatut(anyLong(), any(), any());
         }
 
@@ -351,7 +351,7 @@ class FactureServiceTest {
         void refuseUneFactureInconnue() {
             when(factureDAO.findById(404L)).thenReturn(Optional.empty());
 
-            assertThrows(IntrouvableException.class,
+            assertThrows(RessourceIntrouvableException.class,
                     () -> service.changerStatut(404L, StatutPaiement.PAYEE));
         }
     }
@@ -379,7 +379,7 @@ class FactureServiceTest {
         void trouverUneFactureInconnueRenvoie404() {
             when(factureDAO.findById(404L)).thenReturn(Optional.empty());
 
-            assertThrows(IntrouvableException.class, () -> service.trouver(404L));
+            assertThrows(RessourceIntrouvableException.class, () -> service.trouver(404L));
         }
     }
 }

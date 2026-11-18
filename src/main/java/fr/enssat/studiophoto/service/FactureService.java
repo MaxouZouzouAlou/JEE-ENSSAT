@@ -4,8 +4,8 @@ import fr.enssat.studiophoto.dao.FactureDAO;
 import fr.enssat.studiophoto.dao.FactureDAOImpl;
 import fr.enssat.studiophoto.dao.SeanceDAO;
 import fr.enssat.studiophoto.exception.ConflitException;
-import fr.enssat.studiophoto.exception.RequeteInvalideException;
-import fr.enssat.studiophoto.exception.IntrouvableException;
+import fr.enssat.studiophoto.exception.DonneesInvalidesException;
+import fr.enssat.studiophoto.exception.RessourceIntrouvableException;
 import fr.enssat.studiophoto.model.Client;
 import fr.enssat.studiophoto.model.ClientEntreprise;
 import fr.enssat.studiophoto.model.Facture;
@@ -46,7 +46,7 @@ public class FactureService {
      */
     public Facture generer(long seanceId) {
         Seance seance = seanceDAO.findByFilters(seanceId, null, null, null).stream().findFirst()
-                .orElseThrow(() -> new IntrouvableException("Séance", seanceId));
+                .orElseThrow(() -> new RessourceIntrouvableException("Séance", seanceId));
         if (seance.getStatut() != StatutSeance.TERMINEE) {
             throw new ConflitException("La séance " + seanceId + " est " + seance.getStatut()
                     + " : seule une séance TERMINEE peut être facturée");
@@ -76,7 +76,7 @@ public class FactureService {
 
     public Facture trouver(long id) {
         return factureDAO.findById(id)
-                .orElseThrow(() -> new IntrouvableException("Facture", id));
+                .orElseThrow(() -> new RessourceIntrouvableException("Facture", id));
     }
 
     /**
@@ -85,7 +85,7 @@ public class FactureService {
      */
     public Facture changerStatut(long id, StatutPaiement cible) {
         if (cible == null) {
-            throw new RequeteInvalideException("Le statut de paiement est obligatoire");
+            throw new DonneesInvalidesException("Le statut de paiement est obligatoire");
         }
         Facture facture = trouver(id);
         StatutPaiement actuel = facture.getStatutPaiement();

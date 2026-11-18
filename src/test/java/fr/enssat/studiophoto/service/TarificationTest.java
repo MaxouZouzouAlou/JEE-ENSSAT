@@ -1,6 +1,6 @@
 package fr.enssat.studiophoto.service;
 
-import fr.enssat.studiophoto.exception.RequeteInvalideException;
+import fr.enssat.studiophoto.exception.DonneesInvalidesException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -48,18 +48,18 @@ class TarificationTest {
 
     @Test
     void refuseUnTarifAbsent() {
-        assertThrows(RequeteInvalideException.class, () -> Tarification.calculer(null, 60));
+        assertThrows(DonneesInvalidesException.class, () -> Tarification.calculer(null, 60));
     }
 
     @Test
     void refuseUnTarifNegatif() {
-        assertThrows(RequeteInvalideException.class, () -> Tarification.calculer(new BigDecimal("-1.00"), 60));
+        assertThrows(DonneesInvalidesException.class, () -> Tarification.calculer(new BigDecimal("-1.00"), 60));
     }
 
     @ParameterizedTest
     @CsvSource({"0", "-30"})
     void refuseUneDureeNulleOuNegative(int minutes) {
-        assertThrows(RequeteInvalideException.class,
+        assertThrows(DonneesInvalidesException.class,
                 () -> Tarification.calculer(new BigDecimal("50.00"), minutes));
     }
 }

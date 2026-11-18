@@ -1,6 +1,6 @@
 package fr.enssat.studiophoto.resource;
 
-import fr.enssat.studiophoto.exception.RequeteInvalideException;
+import fr.enssat.studiophoto.exception.DonneesInvalidesException;
 import fr.enssat.studiophoto.model.Facture;
 import fr.enssat.studiophoto.service.FacturePdf;
 import fr.enssat.studiophoto.service.FactureService;
@@ -64,7 +64,7 @@ public class FactureResource {
     @Path("/{id}/statut")
     public Facture changerStatut(@PathParam("id") long id, StatutRequete requete) {
         if (requete == null) {
-            throw new RequeteInvalideException("Le corps de la requête est vide : le statut est attendu.");
+            throw new DonneesInvalidesException("Le corps de la requête est vide : le statut est attendu.");
         }
         return factureService.changerStatut(id, requete.getStatut());
     }

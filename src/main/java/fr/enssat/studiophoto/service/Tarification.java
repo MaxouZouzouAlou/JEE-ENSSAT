@@ -1,6 +1,6 @@
 package fr.enssat.studiophoto.service;
 
-import fr.enssat.studiophoto.exception.RequeteInvalideException;
+import fr.enssat.studiophoto.exception.DonneesInvalidesException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -29,10 +29,10 @@ public final class Tarification {
     // 400 si le tarif est absent/négatif ou si la durée est <= 0
     public static Montants calculer(BigDecimal tarifHoraireHT, int dureeMinutes) {
         if (tarifHoraireHT == null || tarifHoraireHT.signum() < 0) {
-            throw new RequeteInvalideException("Le tarif horaire du type de séance est absent ou négatif");
+            throw new DonneesInvalidesException("Le tarif horaire du type de séance est absent ou négatif");
         }
         if (dureeMinutes <= 0) {
-            throw new RequeteInvalideException("La durée de la séance doit être positive");
+            throw new DonneesInvalidesException("La durée de la séance doit être positive");
         }
         BigDecimal ht = tarifHoraireHT
                 .multiply(BigDecimal.valueOf(dureeMinutes))
