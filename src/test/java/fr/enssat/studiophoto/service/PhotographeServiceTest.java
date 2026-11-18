@@ -9,6 +9,7 @@ import fr.enssat.studiophoto.model.Photographe;
 import fr.enssat.studiophoto.model.Seance;
 import fr.enssat.studiophoto.model.Specialite;
 import fr.enssat.studiophoto.model.StatutSeance;
+import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -200,7 +201,7 @@ class PhotographeServiceTest {
         ConfirmationRequiseException e = assertThrows(ConfirmationRequiseException.class,
                 () -> service.changerStatut(alice.getId(), false, false));
 
-        assertEquals(409, e.getStatus());
+        assertEquals(Response.Status.CONFLICT, e.getStatus());
         assertEquals(2, e.getNombreSeances());
         assertTrue(photographeDAO.photographes.get(alice.getId()).isActif());
         assertEquals(StatutSeance.PLANIFIEE, demain.getStatut());

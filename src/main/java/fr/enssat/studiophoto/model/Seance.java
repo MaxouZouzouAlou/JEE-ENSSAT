@@ -1,8 +1,10 @@
 package fr.enssat.studiophoto.model;
 
+import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.sql.Date;
 
 /**
  * Séance photo. Table {@code seance}.
@@ -23,7 +25,13 @@ public class Seance {
     private Photographe photographe;
     private Client client;
 
-    public Seance() {
+    public Seance(Long id, Date date, Time heureDebut, int duree, String lieu, StatutSeance statut) {
+        this.id = id;
+        this.date = date.toLocalDate();
+        this.heureDebut = heureDebut.toLocalTime();
+        this.duree = duree;
+        this.lieu = lieu;
+        this.statut = statut;
     }
 
     /** Date et heure de début. Pas un getter : n'apparaît pas dans le JSON. */

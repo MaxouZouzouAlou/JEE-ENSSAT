@@ -3,6 +3,7 @@ package fr.enssat.studiophoto.service;
 import fr.enssat.studiophoto.dao.PhotographeDAO;
 import fr.enssat.studiophoto.model.Photographe;
 
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -68,6 +69,11 @@ class FauxPhotographeDAO implements PhotographeDAO {
     @Override
     public void supprimer(long id) {
         photographes.remove(id);
+    }
+
+    @Override
+    public boolean isActif(Long photographeId, Date debut, Date fin) {
+        return true; // non utilisé par PhotographeService
     }
 
     static Photographe copie(Photographe p) {

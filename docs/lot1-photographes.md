@@ -6,9 +6,9 @@ Notes pour la section du rapport consacrée au lot 1.
 
 | Tâche | Fichiers |
 | --- | --- |
-| 1.1 CRUD avec validation | `service/PhotographeService`, `dao/PhotographeDAO(Impl)` |
+| 1.1 CRUD avec validation | `service/PhotographeService`, `dao/PhotographeDAO` + `PhotographeDAOImpl` |
 | 1.2 Spécialités | `dao/SpecialiteDAO(Impl)`, table `photographe_specialite` |
-| 1.3 Activer / désactiver | `PhotographeService.changerStatut`, `dao/SeanceDAO(Impl)` |
+| 1.3 Activer / désactiver | `PhotographeService.changerStatut`, méthodes du lot 1 dans `dao/SeanceDAO`, `exception/ConfirmationRequiseException(Mapper)` |
 | 1.4 Règle de suppression | `PhotographeService.supprimer` |
 | 1.5 Ressources REST | `resource/PhotographeResource`, `resource/SpecialiteResource` |
 | 1.6 Tests unitaires | `src/test/.../service/PhotographeServiceTest` (24 tests) + faux DAO |
@@ -59,7 +59,8 @@ suppression. La base protège aussi la règle (`ON DELETE RESTRICT` sur `seance.
 Un photographe sans aucune séance (créé par erreur) peut, lui, être supprimé.
 
 **Testabilité.** Le service reçoit ses DAO et une `Clock` par le constructeur ; les tests
-utilisent des DAO en mémoire écrits à la main et une horloge fixe, ce qui permet de tester
+utilisent des DAO en mémoire écrits à la main (le faux `SeanceDAO` hérite de la classe du
+lot 3 et ne redéfinit que les trois méthodes utilisées) et une horloge fixe, ce qui permet de tester
 précisément la limite passé / futur (séance ce matin, cet après-midi, pile maintenant).
 
 ## Interface

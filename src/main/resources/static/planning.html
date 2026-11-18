@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-cache">
+    <title>Planning – Studio photo</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Styles propres à la page planning */
+        .barre-outils { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0; }
+        .barre-outils .groupe { display: flex; gap: 4px; align-items: center; }
+        .barre-outils .espace { flex: 1; }
+        .vue-choix button[aria-pressed="false"] { background: #fff; color: var(--principale); }
+        #periode { margin: 0 0 12px; font-size: 20px; }
+        #calendrier { transition: opacity 0.15s; }
+        #calendrier[aria-busy="true"] { opacity: 0.4; pointer-events: none; }
+
+        .semaine { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+        .jour { background: #fff; border: 1px solid var(--bordure); border-radius: 6px; min-height: 140px; display: flex; flex-direction: column; }
+        .jour.aujourdhui { border-color: var(--principale); box-shadow: inset 0 3px 0 var(--principale); }
+        .jour-entete { padding: 8px 10px; border-bottom: 1px solid var(--bordure); background: #eef1f5; border-radius: 6px 6px 0 0; }
+        .jour-entete button { padding: 0; border: none; background: none; color: inherit; font-weight: 600;
+                              text-transform: capitalize; white-space: nowrap; }
+        .jour-entete button:hover { text-decoration: underline; }
+        .jour-contenu { padding: 6px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+        .jour-vide { color: var(--texte-doux); font-size: 13px; text-align: center; margin: auto 0; }
+
+        .seance { display: block; padding: 6px 8px; border: 1px solid var(--bordure); border-left: 4px solid var(--principale);
+                  border-radius: 4px; color: inherit; text-decoration: none; font-size: 13px; line-height: 1.35; background: #fff; }
+        .seance:hover, .seance:focus-visible { background: #f3f7fb; }
+        .seance .horaire { font-weight: 600; }
+        .seance .statut { margin: 2px 0; }
+        .seance .detail { color: var(--texte-doux); overflow-wrap: anywhere; }
+        .seance.CONFIRMEE { border-left-color: var(--principale); }
+        .seance.PLANIFIEE { border-left-color: #8fb3d1; }
+        .seance.TERMINEE  { border-left-color: var(--vert); }
+        .seance.ANNULEE   { border-left-color: var(--rouge); opacity: 0.6; }
+        .seance.ANNULEE .horaire { text-decoration: line-through; }
+
+        /* Vue jour : une seule colonne, cartes plus détaillées */
+        .vue-jour .seance { display: grid; grid-template-columns: 130px 1fr auto; grid-template-areas: "horaire infos statut";
+                            gap: 4px 16px; padding: 12px 14px; font-size: 15px; }
+        .vue-jour .seance .horaire { grid-area: horaire; }
+        .vue-jour .seance .infos { grid-area: infos; }
+        .vue-jour .seance .statut { grid-area: statut; margin: 0; }
+
+        .legende { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; font-size: 13px; color: var(--texte-doux); }
+
+        @media (max-width: 900px) {
+            .semaine { grid-template-columns: 1fr; }
+            .jour { min-height: 0; }
+            .jour-vide { margin: 4px 0; }
+            .vue-jour .seance { grid-template-columns: 1fr auto; grid-template-areas: "horaire statut" "infos infos"; }
+        }
+    </style>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/planning.js"></script>
+</head>
+<body data-rubrique="planning.html">
+<header id="entete"></header>
+
+<main>
+    <div id="messages"></div>
+
+    <h1>Planning</h1>
+    <div class="barre-outils">
+        <div class="groupe vue-choix" role="group" aria-label="Affichage">
+            <button type="button" data-vue="jour" aria-pressed="false">Jour</button>
+            <button type="button" data-vue="semaine" aria-pressed="true">Semaine</button>
+        </div>
+        <div class="groupe">
+            <button type="button" class="secondaire" id="precedent" aria-label="Période précédente">‹</button>
+            <button type="button" class="secondaire" id="aujourdhui">Aujourd'hui</button>
+            <button type="button" class="secondaire" id="suivant" aria-label="Période suivante">›</button>
+        </div>
+        <input type="date" id="date" aria-label="Aller à la date">
+        <span class="espace"></span>
+        <select id="filtre-photographe" aria-label="Filtrer par photographe">
+            <option value="">Tous les photographes</option>
+        </select>
+        <a class="bouton-lien" href="create_seance.html">+ Nouvelle séance</a>
+    </div>
+
+    <h2 id="periode"></h2>
+    <div id="calendrier" aria-live="polite"></div>
+
+    <div class="legende">
+        <span>Statuts :</span>
+        <span class="badge PLANIFIEE">Planifiée</span>
+        <span class="badge CONFIRMEE">Confirmée</span>
+        <span class="badge TERMINEE">Terminée</span>
+        <span class="badge ANNULEE">Annulée</span>
+    </div>
+</main>
+</body>
+</html>

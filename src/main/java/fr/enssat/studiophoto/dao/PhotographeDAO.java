@@ -2,6 +2,7 @@ package fr.enssat.studiophoto.dao;
 
 import fr.enssat.studiophoto.model.Photographe;
 
+import java.sql.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,4 +35,10 @@ public interface PhotographeDAO {
 
     /** Supprime le photographe (ses liaisons aux spécialités sont supprimées en cascade). */
     void supprimer(long id);
+
+    /**
+     * {@code true} si le photographe n'a aucune séance non annulée entre les deux dates (incluses).
+     * Méthode ajoutée par le lot 3 (le nom désigne en fait une disponibilité).
+     */
+    boolean isActif(Long photographeId, Date debut, Date fin);
 }

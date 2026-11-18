@@ -1,17 +1,19 @@
 package fr.enssat.studiophoto.exception;
 
+import jakarta.ws.rs.core.Response;
+
 /**
- * Action impossible dans l'état actuel des données : HTTP 409.
- * Ex. email déjà utilisé, suppression d'un élément encore référencé, transition de statut interdite.
+ * Action impossible dans l'état actuel des données (client ayant des séances,
+ * transition de statut interdite, chevauchement...) : 409.
  */
-public class ConflitException extends ExceptionMetier {
+public class ConflitException extends MetierException {
 
     public ConflitException(String message) {
         super(message);
     }
 
     @Override
-    public int getStatus() {
-        return 409;
+    public Response.Status getStatus() {
+        return Response.Status.CONFLICT;
     }
 }

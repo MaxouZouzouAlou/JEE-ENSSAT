@@ -2,10 +2,12 @@ package fr.enssat.studiophoto.dao;
 
 import fr.enssat.studiophoto.DBManager;
 import fr.enssat.studiophoto.exception.ConflitException;
+import fr.enssat.studiophoto.exception.DaoException;
 import fr.enssat.studiophoto.model.Photographe;
 import fr.enssat.studiophoto.model.Specialite;
 
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -40,7 +42,7 @@ public class PhotographeDAOImpl implements PhotographeDAO {
             chargerSpecialites(c, parId, null);
             return new ArrayList<>(parId.values());
         } catch (SQLException e) {
-            throw new DAOException("Impossible de lire la liste des photographes.", e);
+            throw new DaoException("Impossible de lire la liste des photographes.", e);
         }
     }
 
@@ -125,6 +127,29 @@ public class PhotographeDAOImpl implements PhotographeDAO {
         }
     }
 
+    @Override
+    public boolean isActif(Long photographeId, Date debut, Date fin) {
+        // repris tel quel de la version du lot 3
+        Connection connection = DBManager.getInstance().getConnection();
+        PreparedStatement statement = null;
+        ResultSet rs = null;
+        try {
+            statement = connection.prepareStatement(
+                "SELECT COUNT(*) FROM seance WHERE photographe_id = ? AND date_seance BETWEEN ? AND ? AND statut <> ?");
+            statement.setLong(1, photographeId);
+            statement.setDate(2, debut);
+            statement.setDate(3, fin);
+            statement.setString(4, "ANNULEE");
+            rs = statement.executeQuery();
+            return rs.next() && rs.getInt(1) == 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            DBManager.getInstance().cleanup(connection, statement, rs);
+        }
+    }
+
     // ------------------------------------------------------------------
 
     private Optional<Photographe> trouverUn(String sql, Object parametre) {
@@ -138,7 +163,7 @@ public class PhotographeDAOImpl implements PhotographeDAO {
             chargerSpecialites(c, parId, p.getId());
             return Optional.of(p);
         } catch (SQLException e) {
-            throw new DAOException("Impossible de lire le photographe.", e);
+            throw new DaoException("Impossible de lire le photographe.", e);
         }
     }
 
@@ -203,13 +228,13 @@ public class PhotographeDAOImpl implements PhotographeDAO {
         if (e.getErrorCode() == MYSQL_LIGNE_REFERENCEE) {
             return new ConflitException("Ce photographe a des séances : il ne peut pas être supprimé. Désactivez-le plutôt.");
         }
-        return new DAOException(message, e);
+        return new DaoException(message, e);
     }
 
     private static Connection connexion() {
         Connection c = DBManager.getInstance().getConnection();
         if (c == null) {
-            throw new DAOException("Connexion à la base de données impossible.");
+            throw new DaoException("Connexion à la base de données impossible.");
         }
         return c;
     }

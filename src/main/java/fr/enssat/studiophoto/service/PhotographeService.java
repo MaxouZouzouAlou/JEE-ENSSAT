@@ -3,7 +3,6 @@ package fr.enssat.studiophoto.service;
 import fr.enssat.studiophoto.dao.PhotographeDAO;
 import fr.enssat.studiophoto.dao.PhotographeDAOImpl;
 import fr.enssat.studiophoto.dao.SeanceDAO;
-import fr.enssat.studiophoto.dao.SeanceDAOImpl;
 import fr.enssat.studiophoto.dao.SpecialiteDAO;
 import fr.enssat.studiophoto.dao.SpecialiteDAOImpl;
 import fr.enssat.studiophoto.dto.ResultatChangementStatut;
@@ -52,7 +51,7 @@ public class PhotographeService {
 
     /** Service branché sur la base de données (utilisé par les ressources REST). */
     public PhotographeService() {
-        this(new PhotographeDAOImpl(), new SpecialiteDAOImpl(), new SeanceDAOImpl(), Clock.systemDefaultZone());
+        this(new PhotographeDAOImpl(), new SpecialiteDAOImpl(), new SeanceDAO(), Clock.systemDefaultZone());
     }
 
     /** Service avec des DAO et une horloge au choix (utilisé par les tests). */
@@ -75,7 +74,7 @@ public class PhotographeService {
 
     public Photographe trouver(long id) {
         return photographeDAO.trouverParId(id)
-                .orElseThrow(() -> new RessourceIntrouvableException("Photographe " + id + " introuvable."));
+                .orElseThrow(() -> new RessourceIntrouvableException("Photographe", id));
     }
 
     public List<Specialite> listerSpecialites() {

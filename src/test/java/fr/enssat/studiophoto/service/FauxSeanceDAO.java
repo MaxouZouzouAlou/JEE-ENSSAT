@@ -5,6 +5,8 @@ import fr.enssat.studiophoto.model.Photographe;
 import fr.enssat.studiophoto.model.Seance;
 import fr.enssat.studiophoto.model.StatutSeance;
 
+import java.sql.Date;
+import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -12,20 +14,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
-/** Faux DAO en mémoire, avec la même définition de « séance à venir » que la requête SQL. */
-class FauxSeanceDAO implements SeanceDAO {
+/**
+ * Faux DAO en mémoire, avec la même définition de « séance à venir » que la requête SQL.
+ * Il hérite de SeanceDAO et redéfinit seulement les méthodes utilisées par le lot 1 :
+ * aucune autre méthode n'est appelée par PhotographeService, donc la base n'est jamais touchée.
+ */
+class FauxSeanceDAO extends SeanceDAO {
 
     final List<Seance> seances = new ArrayList<>();
     private long prochainId = 1;
 
     Seance ajouter(Photographe photographe, LocalDateTime debut, int dureeMinutes, StatutSeance statut) {
-        Seance s = new Seance();
-        s.setId(prochainId++);
+        Seance s = new Seance(prochainId++, Date.valueOf(debut.toLocalDate()), Time.valueOf(debut.toLocalTime()),
+                dureeMinutes, "Studio", statut);
         s.setPhotographe(photographe);
-        s.setDate(debut.toLocalDate());
-        s.setHeureDebut(debut.toLocalTime());
-        s.setDuree(dureeMinutes);
-        s.setStatut(statut);
         seances.add(s);
         return s;
     }

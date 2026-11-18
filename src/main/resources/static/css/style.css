@@ -138,6 +138,21 @@ button {
     cursor: pointer;
 }
 
+a.bouton-lien {
+    display: inline-block;
+    padding: 8px 10px;
+    border: 1px solid var(--principale);
+    border-radius: 6px;
+    background: var(--principale);
+    color: #fff;
+    text-decoration: none;
+}
+
+a.bouton-lien.secondaire {
+    background: #fff;
+    color: var(--principale);
+}
+
 button.secondaire {
     background: #fff;
     color: var(--principale);

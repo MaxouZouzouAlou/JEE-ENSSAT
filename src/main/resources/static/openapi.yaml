@@ -3,42 +3,36 @@ info:
   title: Studio photo – API REST
   version: 1.0.0
   description: |
-    Contrat de l'API figé en phase 0 (P0.6). Toute modification d'une route, d'un JSON
-    ou d'un code de retour passe par une pull request annoncée au groupe, et ce fichier
-    est mis à jour dans la même pull request.
+    API de gestion d'un studio de photographie (photographes, clients, séances, factures).
 
-    **Conventions**
-    - Tous les échanges sont en JSON (`application/json`), sauf le PDF des factures.
-    - Dates au format `AAAA-MM-JJ`, heures au format `HH:MM:SS`, durées en minutes,
-      montants en nombres décimaux à 2 chiffres.
-    - Dans un corps de requête, un objet lié (photographe, client, type de séance,
-      spécialité) est donné par son seul identifiant : `{"id": 2}`. Les réponses
-      renvoient l'objet complet.
-    - Codes de retour : 200 lecture/modification, 201 création (en-tête `Location`),
-      204 suppression, 400 données invalides, 404 identifiant inconnu (dans le chemin),
-      409 action impossible dans l'état actuel.
-    - Toute erreur renvoie le format commun `Erreur` : `{status, erreur, message}` (P0.7).
-      Le `message` est en français et affiché tel quel par le front.
+    Dans un corps de requête, un objet lié (ex. une spécialité) est donné par son identifiant :
+    `{"id": 2}` ; les réponses renvoient l'objet complet.
+
+    **Erreurs** : toutes les réponses en erreur ont le même corps JSON (schéma `Erreur`),
+    dont le champ `message` est affiché tel quel par le front.
+
+    | Code | Signification |
+    | --- | --- |
+    | 400 | Données invalides ou JSON illisible |
+    | 404 | Élément ou route introuvable |
+    | 405 | Méthode HTTP non autorisée sur la route |
+    | 409 | Action impossible dans l'état actuel des données (règle métier) |
+    | 415 | Corps envoyé dans un autre format que JSON |
+    | 500 | Erreur d'accès à la base de données |
+
+    Ce fichier est à tenir à jour par chaque lot quand une route est ajoutée ou modifiée.
 servers:
   - url: /api
-
+    description: Serveur local (http://localhost:8080/api)
 tags:
   - name: Photographes
-    description: Lot 1 – photographes et spécialités
+    description: Photographes et spécialités (lot 1)
   - name: Clients
-    description: Lot 2 – clients particuliers et entreprises
-  - name: Séances
-    description: Lot 3 – séances photo, statuts et planning
+    description: Clients particuliers et entreprises
   - name: Factures
-    description: Lot 4 – facturation et PDF
-  - name: Statistiques
-    description: Lot 5 – classements et chiffre d'affaires
+    description: Facturation des séances terminées, statut de paiement et export PDF
 
 paths:
-
-  # ===================================================================
-  # Lot 1 – Photographes et spécialités
-  # ===================================================================
   /photographes:
     get:
       tags: [Photographes]
@@ -80,7 +74,7 @@ paths:
 
   /photographes/{id}:
     parameters:
-      - $ref: '#/components/parameters/Id'
+      - $ref: '#/components/parameters/PhotographeId'
     get:
       tags: [Photographes]
       summary: Détail d'un photographe
@@ -128,7 +122,7 @@ paths:
 
   /photographes/{id}/statut:
     parameters:
-      - $ref: '#/components/parameters/Id'
+      - $ref: '#/components/parameters/PhotographeId'
     patch:
       tags: [Photographes]
       summary: Activer ou désactiver un photographe
@@ -180,214 +174,220 @@ paths:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/Specialite' } }
 
-  # ===================================================================
-  # Lot 2 – Clients
-  # ===================================================================
   /clients:
     get:
       tags: [Clients]
       summary: Lister les clients
-      parameters:
-        - name: type
-          in: query
-          schema: { $ref: '#/components/schemas/TypeClient' }
+      description: Tous les clients, particuliers et entreprises, triés par identifiant.
+      operationId: listerClients
       responses:
         '200':
           description: Liste des clients
           content:
             application/json:
-              schema: { type: array, items: { $ref: '#/components/schemas/Client' } }
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Client'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
     post:
       tags: [Clients]
       summary: Créer un client
       description: |
-        `type` obligatoire. PARTICULIER : `nom` et `prenom` obligatoires.
-        ENTREPRISE : `raisonSociale` et `sirenTva` (SIREN 9 chiffres ou n° de TVA) obligatoires.
-        Dans les deux cas : `adressePostale` et `email` (valide) obligatoires.
+        Le champ `type` choisit le type de client ; seuls les champs de ce type sont pris en compte.
+        Les espaces superflus sont retirés et le numéro SIREN/TVA est normalisé
+        (`fr 12 902 345 678` devient `FR12902345678`).
+      operationId: creerClient
       requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/ClientEntree' }
+        $ref: '#/components/requestBodies/ClientRequete'
       responses:
         '201':
           description: Client créé
           headers:
-            Location: { schema: { type: string } }
+            Location:
+              description: URL du client créé
+              schema:
+                type: string
+                example: http://localhost:8080/api/clients/8
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Client' }
-        '400': { $ref: '#/components/responses/DonneesInvalides' }
+              schema:
+                $ref: '#/components/schemas/Client'
+        '400':
+          $ref: '#/components/responses/DonneesInvalides'
+        '415':
+          $ref: '#/components/responses/FormatNonSupporte'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
 
   /clients/{id}:
     parameters:
-      - $ref: '#/components/parameters/Id'
+      - $ref: '#/components/parameters/ClientId'
     get:
       tags: [Clients]
-      summary: Détail d'un client
+      summary: Consulter un client
+      operationId: trouverClient
       responses:
         '200':
-          description: Client
+          description: Le client
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Client' }
-        '404': { $ref: '#/components/responses/Introuvable' }
+              schema:
+                $ref: '#/components/schemas/Client'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
     put:
       tags: [Clients]
-      summary: Modifier un client (mêmes contrôles qu'à la création)
+      summary: Modifier un client
+      description: |
+        Remplace toutes les données du client. Le type peut changer (particulier ↔ entreprise) :
+        les champs de l'ancien type sont alors effacés.
+      operationId: modifierClient
       requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/ClientEntree' }
+        $ref: '#/components/requestBodies/ClientRequete'
       responses:
         '200':
           description: Client modifié
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Client' }
-        '400': { $ref: '#/components/responses/DonneesInvalides' }
-        '404': { $ref: '#/components/responses/Introuvable' }
+              schema:
+                $ref: '#/components/schemas/Client'
+        '400':
+          $ref: '#/components/responses/DonneesInvalides'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '415':
+          $ref: '#/components/responses/FormatNonSupporte'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
     delete:
       tags: [Clients]
-      summary: Supprimer un client sans séance
+      summary: Supprimer un client
+      description: Refusé (409) si le client a au moins une séance, quel que soit son statut.
+      operationId: supprimerClient
       responses:
-        '204': { description: Client supprimé }
-        '404': { $ref: '#/components/responses/Introuvable' }
+        '204':
+          description: Client supprimé
+        '404':
+          $ref: '#/components/responses/Introuvable'
         '409':
           description: Le client a des séances
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Erreur' }
+              schema:
+                $ref: '#/components/schemas/Erreur'
+              example:
+                status: 409
+                erreur: Conflict
+                message: 'Impossible de supprimer ce client : il a 2 séances enregistrées.'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
 
-  # ===================================================================
-  # Lot 3 – Séances et types de séance
-  # ===================================================================
-  /types-seance:
-    get:
-      tags: [Séances]
-      summary: Lister les types de séance et leur tarif horaire HT
-      responses:
-        '200':
-          description: Types de séance
-          content:
-            application/json:
-              schema: { type: array, items: { $ref: '#/components/schemas/TypeSeance' } }
-
-  /seances:
-    get:
-      tags: [Séances]
-      summary: Planning – lister les séances (triées par date puis heure)
-      parameters:
-        - name: debut
-          in: query
-          description: Première date incluse (AAAA-MM-JJ)
-          schema: { type: string, format: date }
-        - name: fin
-          in: query
-          description: Dernière date incluse (AAAA-MM-JJ)
-          schema: { type: string, format: date }
-        - name: photographeId
-          in: query
-          schema: { type: integer, format: int64 }
-      responses:
-        '200':
-          description: Séances de la période
-          content:
-            application/json:
-              schema: { type: array, items: { $ref: '#/components/schemas/Seance' } }
-        '400':
-          description: Date mal formée ou début après fin
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Erreur' }
+  /seances/{id}/facture:
     post:
-      tags: [Séances]
-      summary: Créer une séance (statut initial PLANIFIEE)
+      tags: [Factures]
+      summary: Générer la facture d'une séance
       description: |
-        400 : champ manquant, date et heure dans le passé, durée ≤ 0, photographe, client
-        ou type de séance inconnu.
-        409 : photographe inactif, ou photographe déjà occupé sur ce créneau
-        (chevauchement avec une séance non annulée ; des séances bout à bout sont autorisées).
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/SeanceEntree' }
+        Seule une séance TERMINEE peut être facturée, une seule fois. Les montants sont calculés
+        (HT = tarif horaire x durée / 60, TVA 20 %), le numéro est FAC-AAAA-NNNN et les coordonnées
+        du client sont copiées dans la facture.
+      operationId: genererFacture
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identifiant de la séance
+          schema:
+            type: integer
+            format: int64
       responses:
         '201':
-          description: Séance créée
-          headers:
-            Location: { schema: { type: string } }
+          description: Facture créée (header Location vers la facture)
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Seance' }
-        '400': { $ref: '#/components/responses/DonneesInvalides' }
+              schema:
+                $ref: '#/components/schemas/Facture'
+        '404':
+          $ref: '#/components/responses/Introuvable'
         '409':
-          description: Photographe inactif ou indisponible
+          description: Séance pas terminée ou déjà facturée
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Erreur' }
-
-  /seances/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
+              schema:
+                $ref: '#/components/schemas/Erreur'
+              example:
+                status: 409
+                erreur: Conflict
+                message: La séance 9 a déjà une facture
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+  /factures:
     get:
-      tags: [Séances]
-      summary: Détail d'une séance
+      tags: [Factures]
+      summary: Lister les factures
+      description: De la plus récente à la plus ancienne.
+      operationId: listerFactures
       responses:
         '200':
-          description: Séance
+          description: Liste des factures
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Seance' }
-        '404': { $ref: '#/components/responses/Introuvable' }
-    put:
-      tags: [Séances]
-      summary: Modifier une séance
-      description: |
-        Mêmes contrôles qu'à la création (la séance elle-même est exclue du calcul de
-        chevauchement). Le statut ne change pas ici. 409 si la séance est TERMINEE ou ANNULEE.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/SeanceEntree' }
-      responses:
-        '200':
-          description: Séance modifiée
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Seance' }
-        '400': { $ref: '#/components/responses/DonneesInvalides' }
-        '404': { $ref: '#/components/responses/Introuvable' }
-        '409':
-          description: Séance terminée ou annulée, photographe inactif ou indisponible
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Erreur' }
-    delete:
-      tags: [Séances]
-      summary: Supprimer une séance sans facture
-      responses:
-        '204': { description: Séance supprimée }
-        '404': { $ref: '#/components/responses/Introuvable' }
-        '409':
-          description: Une facture existe pour cette séance
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Erreur' }
-
-  /seances/{id}/statut:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Facture'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+  /factures/{id}:
     parameters:
-      - $ref: '#/components/parameters/Id'
+      - $ref: '#/components/parameters/FactureId'
+    get:
+      tags: [Factures]
+      summary: Consulter une facture
+      operationId: trouverFacture
+      responses:
+        '200':
+          description: La facture
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Facture'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+  /factures/{id}/pdf:
+    parameters:
+      - $ref: '#/components/parameters/FactureId'
+    get:
+      tags: [Factures]
+      summary: Télécharger le PDF d'une facture
+      description: Le PDF est regénéré à chaque appel à partir des données de la facture.
+      operationId: telechargerFacturePdf
+      responses:
+        '200':
+          description: PDF (attachment FAC-AAAA-NNNN.pdf)
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+  /factures/{id}/statut:
+    parameters:
+      - $ref: '#/components/parameters/FactureId'
     patch:
-      tags: [Séances]
-      summary: Changer le statut d'une séance
+      tags: [Factures]
+      summary: Changer le statut de paiement
       description: |
-        Transitions autorisées : PLANIFIEE → CONFIRMEE ou ANNULEE ; CONFIRMEE → TERMINEE
-        (seulement si la séance est passée) ou ANNULEE. TERMINEE et ANNULEE sont définitifs.
-        Toute autre transition : 409.
+        EN_ATTENTE vers PAYEE ou ANNULEE uniquement ; PAYEE et ANNULEE sont définitifs.
+      operationId: changerStatutFacture
       requestBody:
         required: true
         content:
@@ -396,214 +396,84 @@ paths:
               type: object
               required: [statut]
               properties:
-                statut: { $ref: '#/components/schemas/StatutSeance' }
+                statut:
+                  $ref: '#/components/schemas/StatutPaiement'
       responses:
         '200':
-          description: Séance avec son nouveau statut
+          description: Facture mise à jour
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Seance' }
-        '400': { $ref: '#/components/responses/DonneesInvalides' }
-        '404': { $ref: '#/components/responses/Introuvable' }
-        '409':
-          description: Transition interdite
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Erreur' }
-
-  # ===================================================================
-  # Lot 4 – Factures
-  # ===================================================================
-  /seances/{id}/facture:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    post:
-      tags: [Factures]
-      summary: Générer la facture d'une séance TERMINEE
-      description: |
-        Numéro FAC-AAAA-NNNN (repart à 0001 chaque année), date d'émission du jour,
-        statut EN_ATTENTE. HT = tarif horaire du type × durée, TVA 20 %, montants arrondis
-        à 2 décimales. Coordonnées du client et détail de la prestation copiés dans la facture.
-        Pas de corps de requête.
-      responses:
-        '201':
-          description: Facture créée
-          headers:
-            Location: { schema: { type: string }, description: 'URL de la facture : /api/factures/{id}' }
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Facture' }
-        '404': { $ref: '#/components/responses/Introuvable' }
-        '409':
-          description: Séance non TERMINEE ou déjà facturée
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Erreur' }
-
-  /factures:
-    get:
-      tags: [Factures]
-      summary: Lister les factures (les plus récentes d'abord)
-      parameters:
-        - name: statut
-          in: query
-          schema: { $ref: '#/components/schemas/StatutPaiement' }
-        - name: seanceId
-          in: query
-          description: Facture d'une séance donnée (liste vide si la séance n'est pas facturée)
-          schema: { type: integer, format: int64 }
-      responses:
-        '200':
-          description: Factures
-          content:
-            application/json:
-              schema: { type: array, items: { $ref: '#/components/schemas/Facture' } }
-
-  /factures/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Factures]
-      summary: Détail d'une facture
-      responses:
-        '200':
-          description: Facture
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Facture' }
-        '404': { $ref: '#/components/responses/Introuvable' }
-
-  /factures/{id}/statut:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    patch:
-      tags: [Factures]
-      summary: Changer le statut de paiement
-      description: Seules transitions autorisées EN_ATTENTE → PAYEE et EN_ATTENTE → ANNULEE ; les autres donnent 409.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [statutPaiement]
-              properties:
-                statutPaiement: { $ref: '#/components/schemas/StatutPaiement' }
-      responses:
-        '200':
-          description: Facture avec son nouveau statut
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Facture' }
-        '400': { $ref: '#/components/responses/DonneesInvalides' }
-        '404': { $ref: '#/components/responses/Introuvable' }
-        '409':
-          description: Transition interdite
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Erreur' }
-
-  /factures/{id}/pdf:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Factures]
-      summary: Télécharger la facture en PDF
-      responses:
-        '200':
-          description: Fichier PDF (en-tête Content-Disposition avec le numéro de facture)
-          content:
-            application/pdf:
-              schema: { type: string, format: binary }
-        '404': { $ref: '#/components/responses/Introuvable' }
-
-  # ===================================================================
-  # Lot 5 – Statistiques
-  # ===================================================================
-  /statistiques/top-seances:
-    get:
-      tags: [Statistiques]
-      summary: Top 5 des photographes par nombre de séances TERMINEE
-      description: Tri décroissant ; à égalité, par nom. Moins de 5 lignes s'il y a moins de 5 photographes concernés.
-      responses:
-        '200':
-          description: Classement
-          content:
-            application/json:
-              schema: { type: array, maxItems: 5, items: { $ref: '#/components/schemas/LigneClassement' } }
-
-  /statistiques/top-duree:
-    get:
-      tags: [Statistiques]
-      summary: Top 5 des photographes par durée cumulée des séances TERMINEE
-      description: "`valeur` = durée totale en minutes. Tri décroissant ; à égalité, par nom."
-      responses:
-        '200':
-          description: Classement
-          content:
-            application/json:
-              schema: { type: array, maxItems: 5, items: { $ref: '#/components/schemas/LigneClassement' } }
-
-  /statistiques/chiffre-affaires:
-    get:
-      tags: [Statistiques]
-      summary: Chiffre d'affaires des factures PAYEE émises sur une période
-      parameters:
-        - name: debut
-          in: query
-          required: true
-          description: Première date d'émission incluse
-          schema: { type: string, format: date }
-        - name: fin
-          in: query
-          required: true
-          description: Dernière date d'émission incluse
-          schema: { type: string, format: date }
-      responses:
-        '200':
-          description: Totaux HT et TTC (0 si aucune facture)
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ChiffreAffaires' }
+              schema:
+                $ref: '#/components/schemas/Facture'
         '400':
-          description: Date manquante ou mal formée, ou début après fin
+          $ref: '#/components/responses/DonneesInvalides'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '409':
+          description: Transition interdite ou facture modifiée entre-temps
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Erreur' }
+              schema:
+                $ref: '#/components/schemas/Erreur'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
 
 components:
-
   parameters:
-    Id:
+    PhotographeId:
       name: id
       in: path
       required: true
-      schema: { type: integer, format: int64 }
+      description: Identifiant du photographe
+      schema:
+        type: integer
+        format: int64
+        example: 1
+    FactureId:
+      name: id
+      in: path
+      required: true
+      description: Identifiant de la facture
+      schema:
+        type: integer
+        format: int64
+    ClientId:
+      name: id
+      in: path
+      required: true
+      description: Identifiant du client
+      schema:
+        type: integer
+        format: int64
+        example: 5
 
-  responses:
-    DonneesInvalides:
-      description: Données invalides (champ manquant, format incorrect...)
+  requestBodies:
+    ClientRequete:
+      required: true
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Erreur' }
-          example: { status: 400, erreur: Bad Request, message: Le nom est obligatoire. }
-    Introuvable:
-      description: Identifiant inconnu
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Erreur' }
-          example: { status: 404, erreur: Not Found, message: Photographe 42 introuvable. }
+          schema:
+            $ref: '#/components/schemas/ClientRequete'
+          examples:
+            particulier:
+              summary: Client particulier
+              value:
+                type: PARTICULIER
+                nom: Bernard
+                prenom: Julie
+                adressePostale: 12 rue des Lilas, 22300 Lannion
+                email: julie.bernard@mail.example
+            entreprise:
+              summary: Client entreprise
+              value:
+                type: ENTREPRISE
+                raisonSociale: Agence Horizon Événements
+                sirenTva: '901234567'
+                adressePostale: 15 boulevard de la Mer, 22300 Lannion
+                email: contact@horizon-evenements.example
 
   schemas:
-
-    # ---------- Erreurs (P0.7) ----------
-    Erreur:
-      type: object
-      description: Format commun de toutes les réponses d'erreur
-      properties:
-        status: { type: integer, example: 409 }
-        erreur: { type: string, description: Libellé standard du code HTTP, example: Conflict }
-        message: { type: string, description: 'Explication en français, affichée par le front', example: Cet email est déjà utilisé. }
+    # ---------- Lot 1 : photographes ----------
     ErreurConfirmation:
       description: Erreur 409 qui peut être levée en renvoyant la requête avec `confirmer=true`
       allOf:
@@ -619,7 +489,6 @@ components:
       properties:
         id: { type: integer, format: int64, example: 1 }
 
-    # ---------- Lot 1 ----------
     Specialite:
       type: object
       properties:
@@ -644,106 +513,183 @@ components:
           items: { $ref: '#/components/schemas/Reference' }
           example: [{ id: 2 }, { id: 3 }]
 
-    # ---------- Lot 2 ----------
     TypeClient:
       type: string
       enum: [PARTICULIER, ENTREPRISE]
-    Client:
+
+    ClientRequete:
       type: object
-      description: Champs nom/prenom pour un particulier, raisonSociale/sirenTva pour une entreprise
-      properties:
-        id: { type: integer, format: int64, example: 1 }
-        type: { $ref: '#/components/schemas/TypeClient' }
-        adressePostale: { type: string, example: '12 rue des Lilas, 22300 Lannion' }
-        email: { type: string, example: julie.bernard@mail.example }
-        nom: { type: string, example: Bernard }
-        prenom: { type: string, example: Julie }
-        raisonSociale: { type: string, example: Agence Horizon Événements }
-        sirenTva: { type: string, example: '901234567' }
-    ClientEntree:
-      type: object
+      description: |
+        Corps unique pour les deux types de client. Champs obligatoires selon `type` :
+        - tous : `adressePostale`, `email` (adresse email valide) ;
+        - `PARTICULIER` : `nom`, `prenom` ;
+        - `ENTREPRISE` : `raisonSociale`, `sirenTva` (9 chiffres, ou FR + 11 caractères).
+
+        Les champs de l'autre type sont ignorés. Toutes les erreurs de validation
+        sont renvoyées ensemble dans un seul message (400).
       required: [type, adressePostale, email]
       properties:
-        type: { $ref: '#/components/schemas/TypeClient' }
-        adressePostale: { type: string, maxLength: 255 }
-        email: { type: string, maxLength: 150 }
-        nom: { type: string, maxLength: 100, description: PARTICULIER uniquement }
-        prenom: { type: string, maxLength: 100, description: PARTICULIER uniquement }
-        raisonSociale: { type: string, maxLength: 150, description: ENTREPRISE uniquement }
-        sirenTva: { type: string, maxLength: 20, description: ENTREPRISE uniquement }
-      example: { type: PARTICULIER, nom: Bernard, prenom: Julie, adressePostale: '12 rue des Lilas, 22300 Lannion', email: julie@mail.example }
+        type:
+          $ref: '#/components/schemas/TypeClient'
+        adressePostale:
+          type: string
+          maxLength: 255
+        email:
+          type: string
+          format: email
+          maxLength: 150
+        nom:
+          type: string
+          maxLength: 100
+          description: Particulier uniquement
+        prenom:
+          type: string
+          maxLength: 100
+          description: Particulier uniquement
+        raisonSociale:
+          type: string
+          maxLength: 150
+          description: Entreprise uniquement
+        sirenTva:
+          type: string
+          maxLength: 20
+          description: Entreprise uniquement – SIREN (9 chiffres) ou TVA intracommunautaire française
+          example: FR12902345678
 
-    # ---------- Lot 3 ----------
-    StatutSeance:
-      type: string
-      enum: [PLANIFIEE, CONFIRMEE, TERMINEE, ANNULEE]
-    TypeSeance:
-      type: object
-      properties:
-        id: { type: integer, format: int64, example: 1 }
-        libelle: { type: string, example: Portrait }
-        tarifHoraireHT: { type: number, example: 80.00 }
-    Seance:
-      type: object
-      properties:
-        id: { type: integer, format: int64, example: 13 }
-        date: { type: string, format: date, example: '2026-11-20' }
-        heureDebut: { type: string, example: '10:00:00' }
-        duree: { type: integer, description: Durée en minutes, example: 120 }
-        lieu: { type: string, example: 'Studio du centre-ville, Lannion' }
-        statut: { $ref: '#/components/schemas/StatutSeance' }
-        typeSeance: { $ref: '#/components/schemas/TypeSeance' }
-        photographe: { $ref: '#/components/schemas/Photographe' }
-        client: { $ref: '#/components/schemas/Client' }
-    SeanceEntree:
-      type: object
-      required: [date, heureDebut, duree, lieu, typeSeance, photographe, client]
-      properties:
-        date: { type: string, format: date, example: '2026-11-20' }
-        heureDebut: { type: string, example: '10:00:00' }
-        duree: { type: integer, minimum: 1, example: 120 }
-        lieu: { type: string, maxLength: 255, example: 'Studio du centre-ville, Lannion' }
-        typeSeance: { $ref: '#/components/schemas/Reference' }
-        photographe: { $ref: '#/components/schemas/Reference' }
-        client: { $ref: '#/components/schemas/Reference' }
+    Client:
+      description: Client renvoyé par l'API ; le champ `type` indique lequel des deux schémas s'applique.
+      oneOf:
+        - $ref: '#/components/schemas/ClientParticulier'
+        - $ref: '#/components/schemas/ClientEntreprise'
+      discriminator:
+        propertyName: type
+        mapping:
+          PARTICULIER: '#/components/schemas/ClientParticulier'
+          ENTREPRISE: '#/components/schemas/ClientEntreprise'
 
-    # ---------- Lot 4 ----------
+    ClientCommun:
+      type: object
+      required: [id, type, adressePostale, email]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        type:
+          $ref: '#/components/schemas/TypeClient'
+        adressePostale:
+          type: string
+          example: 12 rue des Lilas, 22300 Lannion
+        email:
+          type: string
+          format: email
+          example: julie.bernard@mail.example
+
+    ClientParticulier:
+      allOf:
+        - $ref: '#/components/schemas/ClientCommun'
+        - type: object
+          required: [nom, prenom]
+          properties:
+            nom:
+              type: string
+              example: Bernard
+            prenom:
+              type: string
+              example: Julie
+
+    ClientEntreprise:
+      allOf:
+        - $ref: '#/components/schemas/ClientCommun'
+        - type: object
+          required: [raisonSociale, sirenTva]
+          properties:
+            raisonSociale:
+              type: string
+              example: Agence Horizon Événements
+            sirenTva:
+              type: string
+              example: '901234567'
+
     StatutPaiement:
       type: string
       enum: [EN_ATTENTE, PAYEE, ANNULEE]
     Facture:
       type: object
+      description: Facture d'une séance, avec les coordonnées du client et le détail de la prestation copiés à l'émission.
       properties:
-        id: { type: integer, format: int64, example: 1 }
-        numero: { type: string, example: FAC-2026-0001 }
-        dateEmission: { type: string, format: date }
-        montantHT: { type: number, example: 1200.00 }
-        tauxTVA: { type: number, description: En pourcentage, example: 20.00 }
-        montantTTC: { type: number, example: 1440.00 }
-        statutPaiement: { $ref: '#/components/schemas/StatutPaiement' }
-        seanceId: { type: integer, format: int64 }
-        clientDesignation: { type: string, description: '« Prénom Nom » ou raison sociale, copié à la génération' }
-        clientAdresse: { type: string }
-        clientEmail: { type: string }
-        clientSirenTva: { type: string, nullable: true }
-        prestationDate: { type: string, format: date }
-        prestationHeure: { type: string, example: '14:00:00' }
-        prestationDuree: { type: integer, description: Durée en minutes }
-        prestationType: { type: string, example: Mariage }
-        photographeNom: { type: string, example: Alice Martin }
+        id: {type: integer, format: int64}
+        numero: {type: string, example: FAC-2026-0007}
+        dateEmission: {type: string, format: date}
+        montantHT: {type: number, example: 120.00}
+        tauxTVA: {type: number, example: 20.00}
+        montantTTC: {type: number, example: 144.00}
+        statutPaiement:
+          $ref: '#/components/schemas/StatutPaiement'
+        seanceId: {type: integer, format: int64}
+        clientDesignation: {type: string}
+        clientAdresse: {type: string}
+        clientEmail: {type: string}
+        clientSirenTva:
+          type: string
+          nullable: true
+          description: Renseigné seulement pour une entreprise
+        prestationDate: {type: string, format: date}
+        prestationHeure: {type: string, example: '16:00:00'}
+        prestationDuree: {type: integer, description: Durée en minutes}
+        prestationType: {type: string}
+        photographeNom: {type: string}
+    Erreur:
+      type: object
+      description: Corps commun à toutes les réponses en erreur.
+      required: [status, erreur, message]
+      properties:
+        status:
+          type: integer
+          example: 404
+        erreur:
+          type: string
+          description: Libellé standard du code HTTP
+          example: Not Found
+        message:
+          type: string
+          description: Message en français, affiché par le front
+          example: Client 42 introuvable.
 
-    # ---------- Lot 5 ----------
-    LigneClassement:
-      type: object
-      properties:
-        photographeId: { type: integer, format: int64, example: 2 }
-        nom: { type: string, example: Bruno Leroy }
-        valeur: { type: integer, description: Nombre de séances ou durée totale en minutes selon la route, example: 3 }
-    ChiffreAffaires:
-      type: object
-      properties:
-        debut: { type: string, format: date }
-        fin: { type: string, format: date }
-        nombreFactures: { type: integer, example: 5 }
-        montantHT: { type: number, example: 3420.00 }
-        montantTTC: { type: number, example: 4104.00 }
+  responses:
+    DonneesInvalides:
+      description: Données invalides ou JSON illisible
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erreur'
+          example:
+            status: 400
+            erreur: Bad Request
+            message: L'email n'est pas valide. Le prénom est obligatoire.
+    Introuvable:
+      description: Élément introuvable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erreur'
+          example:
+            status: 404
+            erreur: Not Found
+            message: Client 42 introuvable.
+    FormatNonSupporte:
+      description: Le corps n'est pas envoyé en JSON
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erreur'
+    ErreurServeur:
+      description: Erreur d'accès à la base de données
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erreur'
+          example:
+            status: 500
+            erreur: Internal Server Error
+            message: Erreur d'accès aux données, réessayez plus tard.

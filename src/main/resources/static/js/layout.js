@@ -9,6 +9,7 @@ const RUBRIQUES = [
     { page: 'photographes.html', libelle: 'Photographes' },
     { page: 'clients.html', libelle: 'Clients' },
     { page: 'seances.html', libelle: 'Séances' },
+    { page: 'planning.html', libelle: 'Planning' },
     { page: 'factures.html', libelle: 'Factures' },
     { page: 'statistiques.html', libelle: 'Statistiques' }
 ];

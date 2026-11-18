@@ -1,15 +1,12 @@
 package fr.enssat.studiophoto.exception;
 
+import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 /**
- * Format commun des réponses d'erreur de l'API (phase 0, P0.7) :
- * <pre>{ "status": 409, "erreur": "Conflict", "message": "Cet email est déjà utilisé." }</pre>
- * <ul>
- *   <li>{@code status} : code HTTP ;</li>
- *   <li>{@code erreur} : libellé standard du code HTTP ;</li>
- *   <li>{@code message} : explication en français, affichée telle quelle par le front (api.js).</li>
- * </ul>
+ * Corps JSON commun à toutes les réponses en erreur :
+ * {@code {"status": 404, "erreur": "Not Found", "message": "Client 42 introuvable."}}.
+ * C'est le format lu par {@code lireMessageErreur} dans {@code js/api.js}.
  */
 public class ErreurReponse {
 
@@ -20,11 +17,16 @@ public class ErreurReponse {
     public ErreurReponse() {
     }
 
-    public ErreurReponse(int status, String message) {
+    public ErreurReponse(int status, String erreur, String message) {
         this.status = status;
-        Response.Status statut = Response.Status.fromStatusCode(status);
-        this.erreur = statut != null ? statut.getReasonPhrase() : "Erreur";
+        this.erreur = erreur;
         this.message = message;
+    }
+
+    /** Construit la réponse HTTP complète (code + corps JSON). */
+    public static Response creer(Response.StatusType statut, String message) {
+        ErreurReponse corps = new ErreurReponse(statut.getStatusCode(), statut.getReasonPhrase(), message);
+        return Response.status(statut).entity(corps).type(MediaType.APPLICATION_JSON).build();
     }
 
     public int getStatus() { return status; }

@@ -1,14 +1,16 @@
 package fr.enssat.studiophoto.exception;
 
-/** Données reçues invalides (champ obligatoire manquant, format incorrect...) : HTTP 400. */
-public class DonneesInvalidesException extends ExceptionMetier {
+import jakarta.ws.rs.core.Response;
+
+/** Données reçues incomplètes ou mal formées (champ obligatoire absent, SIREN invalide...) : 400. */
+public class DonneesInvalidesException extends MetierException {
 
     public DonneesInvalidesException(String message) {
         super(message);
     }
 
     @Override
-    public int getStatus() {
-        return 400;
+    public Response.Status getStatus() {
+        return Response.Status.BAD_REQUEST;
     }
 }
