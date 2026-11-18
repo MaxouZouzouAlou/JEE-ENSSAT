@@ -6,6 +6,8 @@
    ===================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
+    // bouton "Générer la facture" des séances terminées (js/facturation.js)
+    activerBoutonsFacture(document.getElementById('liste-seances'));
     chargerSeances();
 });
 
@@ -26,7 +28,7 @@ async function chargerSeances() {
                 <td>${echapperHtml(formaterDuree(seance.duree))}</td>
                 <td>${echapperHtml(seance.lieu)}</td>
                 <td>${badgeStatut(seance.statut)}</td>
-                <td><a class="bouton-lien" href="update_seance.html?id=${encodeURIComponent(seance.id)}">Modifier</a></td>
+                <td><a class="bouton-lien" href="update_seance.html?id=${encodeURIComponent(seance.id)}">Modifier</a> ${htmlBoutonFacture(seance)}</td>
             </tr>
         `).join('');
     } catch (e) {
