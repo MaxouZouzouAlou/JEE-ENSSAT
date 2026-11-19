@@ -36,6 +36,8 @@ document.addEventListener('DOMContentLoaded', () => {
     fiche.addEventListener('click', e => {
         const bouton = e.target.closest('button[data-statut]');
         if (bouton) changerStatut(bouton.dataset.statut, bouton);
+        const suppression = e.target.closest('button[data-action="supprimer-seance"]');
+        if (suppression) supprimerSeance(suppression);
     });
     chargerSeance();
 });
@@ -47,8 +49,7 @@ async function chargerSeance() {
         return;
     }
     try {
-        const resultat = await api.get('/seance?id=' + encodeURIComponent(id));
-        seance = resultat[0];
+        seance = await api.get('/seances/' + encodeURIComponent(id));
         if (!seance) {
             afficherErreur('Séance introuvable.');
             return;
@@ -84,7 +85,7 @@ function afficherFiche() {
         + '<p>Type : ' + echapperHtml(seance.typeSeance && seance.typeSeance.libelle) + '</p>'
         + '<p>Photographe : ' + echapperHtml(seance.photographe && seance.photographe.nom) + '</p>'
         + '<p>Client : ' + echapperHtml(designationClient(seance.client)) + '</p>'
-        + '<div class="actions">' + htmlActions() + '</div>';
+        + '<div class="actions">' + htmlActions() + htmlBoutonSupprimer() + '</div>';
     fiche.hidden = false;
 }
 
@@ -108,6 +109,28 @@ function htmlActions() {
     }
     return html + ' <a class="bouton-lien secondaire" href="update_seance.html?id='
         + encodeURIComponent(seance.id) + '">Modifier</a>';
+}
+
+// une séance facturée ne peut pas être supprimée (le serveur refuse aussi, 409)
+function htmlBoutonSupprimer() {
+    if (facturesParSeance.get(seance.id)) {
+        return '';
+    }
+    return ' <button type="button" class="danger" data-action="supprimer-seance">Supprimer</button>';
+}
+
+async function supprimerSeance(bouton) {
+    if (!window.confirm('Supprimer définitivement la séance n° ' + seance.id + ' ?')) {
+        return;
+    }
+    bouton.disabled = true;
+    try {
+        await api.delete('/seances/' + encodeURIComponent(seance.id));
+        window.location.href = 'seances.html';
+    } catch (e) {
+        // l'erreur est déjà affichée par api.js
+        bouton.disabled = false;
+    }
 }
 
 async function changerStatut(cible, bouton) {

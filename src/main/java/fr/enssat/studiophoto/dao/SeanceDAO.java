@@ -296,6 +296,35 @@ public class SeanceDAO {
     }
 
     // ------------------------------------------------------------------
+    // Contrôle de disponibilité du photographe (lot 3)
+    // ------------------------------------------------------------------
+
+    /**
+     * {@code true} si le photographe a une séance non annulée qui chevauche le créneau
+     * [debut, fin[. Des séances bout à bout ne se chevauchent pas (comparaisons strictes).
+     *
+     * @param seanceExclue séance à ignorer (celle qu'on modifie), ou {@code null} à la création
+     */
+    public boolean existeChevauchement(long photographeId, LocalDateTime debut, LocalDateTime fin, Long seanceExclue) {
+        String sql = "SELECT COUNT(*) FROM seance WHERE photographe_id = ? AND statut <> 'ANNULEE'"
+                + (seanceExclue != null ? " AND id <> ?" : "")
+                + " AND TIMESTAMP(date_seance, heure_debut) < ?"
+                + " AND DATE_ADD(TIMESTAMP(date_seance, heure_debut), INTERVAL duree_minutes MINUTE) > ?";
+        try (Connection c = connexionLot1(); PreparedStatement ps = c.prepareStatement(sql)) {
+            int i = 1;
+            ps.setLong(i++, photographeId);
+            if (seanceExclue != null) {
+                ps.setLong(i++, seanceExclue);
+            }
+            ps.setObject(i++, fin);
+            ps.setObject(i, debut);
+            return lireNombre(ps) > 0;
+        } catch (SQLException e) {
+            throw new DaoException("Impossible de vérifier la disponibilité du photographe " + photographeId, e);
+        }
+    }
+
+    // ------------------------------------------------------------------
     // Méthodes utilisées par le lot 1 (désactivation et suppression d'un photographe).
     // Une séance « à venir » est PLANIFIEE ou CONFIRMEE et commence strictement après
     // l'instant donné ; l'instant est un paramètre pour que le service reste testable.

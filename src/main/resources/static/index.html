@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="js/api.js"></script>
     <script src="js/layout.js"></script>
+    <script src="js/accueil.js"></script>
 </head>
 <body>
 <header id="entete"></header>
@@ -18,7 +19,30 @@
     <h1>Studio photo</h1>
     <p>Gestion des photographes, des clients, des séances et de la facturation.</p>
 
-    <div class="grille">
+    <!-- Choix du profil : affiché tant qu'aucun profil n'est choisi (js/accueil.js) -->
+    <form id="choix-profil" class="carte" hidden>
+        <h2>Qui êtes-vous ?</h2>
+        <p>Choisissez votre profil : seules les rubriques qui vous concernent seront affichées.</p>
+
+        <label for="role">Je suis</label>
+        <select id="role" required>
+            <option value="">Choisir un profil…</option>
+            <option value="GESTIONNAIRE">Gestionnaire du studio</option>
+            <option value="SECRETAIRE">Secrétaire</option>
+            <option value="PHOTOGRAPHE">Photographe</option>
+        </select>
+
+        <div id="bloc-photographe" hidden>
+            <label for="photographe-profil">Photographe</label>
+            <select id="photographe-profil">
+                <option value="">Chargement…</option>
+            </select>
+        </div>
+
+        <div class="actions"><button type="submit">Continuer</button></div>
+    </form>
+
+    <div class="grille" id="rubriques" hidden>
         <a class="carte" href="photographes.html">
             <h2>Photographes</h2>
             <p>Liste des photographes, spécialités, activation et désactivation.</p>
@@ -30,6 +54,10 @@
         <a class="carte" href="seances.html">
             <h2>Séances</h2>
             <p>Planning des séances, création, modification et changement de statut.</p>
+        </a>
+        <a class="carte" href="planning.html">
+            <h2>Planning</h2>
+            <p>Séances du jour ou de la semaine, par photographe.</p>
         </a>
         <a class="carte" href="factures.html">
             <h2>Factures</h2>

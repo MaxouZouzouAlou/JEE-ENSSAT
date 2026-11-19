@@ -106,12 +106,30 @@ curl -X PATCH http://localhost:8080/api/seances/13/statut -H "Content-Type: appl
 
 Pour créer une séance, remplacer les identifiants par ceux de types, photographes actifs et clients présents en base.
 
+### Lancer le jar exécutable (livrable)
+
+```bash
+mvn clean package                      # produit target/studiophoto.jar (toutes les bibliothèques incluses)
+java -jar target/studiophoto.jar       # puis http://localhost:8080/
+```
+
+Les paramètres de connexion peuvent être donnés au lancement, sans modifier `application.properties`
+(utile pour ne pas versionner le mot de passe). Par ordre de priorité :
+
+```bash
+java -Ddatabase.password=... -jar target/studiophoto.jar      # 1. option -D
+DATABASE_PASSWORD=... java -jar target/studiophoto.jar        # 2. variable d'environnement
+                                                              # 3. sinon application.properties
+```
+
+Même principe pour `database.url` (`DATABASE_URL`) et `database.login` (`DATABASE_LOGIN`).
+
 ## 4. Compiler et tester
 
 ```bash
 mvn clean compile   # recompiler depuis zéro
 mvn test            # lancer les tests unitaires
-mvn package         # construire le jar dans target/
+mvn package         # construire le jar exécutable target/studiophoto.jar
 ```
 
 ## 5. Documentation du projet

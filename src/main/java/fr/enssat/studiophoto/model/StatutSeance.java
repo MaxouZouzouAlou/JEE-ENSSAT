@@ -32,6 +32,14 @@ public enum StatutSeance {
     }
 
     public boolean peutPasserA(StatutSeance statutCible, LocalDateTime finSeance) {
+        return peutPasserA(statutCible, finSeance, LocalDateTime.now());
+    }
+
+    /**
+     * Même règle, à un instant donné : permet de tester la règle « terminer seulement
+     * après la fin » sans dépendre de l'heure réelle.
+     */
+    public boolean peutPasserA(StatutSeance statutCible, LocalDateTime finSeance, LocalDateTime maintenant) {
         if (statutCible == null) {
             return false;
         }
@@ -39,7 +47,7 @@ public enum StatutSeance {
         return switch (this) {
             case PLANIFIEE -> statutCible == CONFIRMEE || statutCible == ANNULEE;
             case CONFIRMEE -> statutCible == ANNULEE
-                    || (statutCible == TERMINEE && finSeance != null && !LocalDateTime.now().isBefore(finSeance));
+                    || (statutCible == TERMINEE && finSeance != null && !maintenant.isBefore(finSeance));
             case TERMINEE, ANNULEE -> false;
         };
     }

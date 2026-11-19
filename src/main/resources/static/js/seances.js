@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function chargerSeances() {
     const corpsTableau = document.getElementById('liste-seances');
     try {
-        const [seances, facturesParSeance] = await Promise.all([api.get('/seance'), chargerFacturesParSeance()]);
+        const [seances, facturesParSeance] = await Promise.all([api.get('/seances'), chargerFacturesParSeance()]);
         if (seances.length === 0) {
             corpsTableau.innerHTML = '<tr><td colspan="7">Aucune séance à afficher.</td></tr>';
             return;

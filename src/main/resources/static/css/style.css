@@ -23,6 +23,11 @@
     --rouge: #b23b3b;
 }
 
+/* hidden doit toujours masquer, même un élément stylé en block, flex ou grid (.carte, .grille...) */
+[hidden] {
+    display: none !important;
+}
+
 body {
     margin: 0;
     font-family: system-ui, sans-serif;
@@ -51,6 +56,19 @@ header a {
 header a:hover,
 header a.actif {
     background: rgba(255, 255, 255, 0.2);
+}
+
+/* Profil choisi sur l'accueil, à droite de l'en-tête (layout.js) */
+header .profil {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+    color: #fff;
+}
+
+header .profil button {
+    padding: 4px 10px;
 }
 
 /* ---------- Contenu ---------- */
