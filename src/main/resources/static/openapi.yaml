@@ -3,7 +3,7 @@ info:
   title: Studio photo – API REST
   version: 1.0.0
   description: |
-    API de gestion d'un studio de photographie (photographes, clients, séances, factures).
+    API de gestion d'un studio de photographie (photographes, clients, séances, factures, statistiques).
 
     Dans un corps de requête, un objet lié (ex. une spécialité) est donné par son identifiant :
     `{"id": 2}` ; les réponses renvoient l'objet complet.
@@ -29,8 +29,12 @@ tags:
     description: Photographes et spécialités (lot 1)
   - name: Clients
     description: Clients particuliers et entreprises
+  - name: Séances
+    description: Planning, création, modification et statuts des séances (lot 3)
   - name: Factures
     description: Facturation des séances terminées, statut de paiement et export PDF
+  - name: Statistiques
+    description: Classements des photographes et chiffre d'affaires (lot 5)
 
 paths:
   /photographes:
@@ -286,6 +290,214 @@ paths:
         '500':
           $ref: '#/components/responses/ErreurServeur'
 
+  /seance:
+    get:
+      tags: [Séances]
+      summary: Consulter le planning des séances
+      description: |
+        Séances triées par date puis par heure, avec leur type, leur photographe et leur client.
+        Tous les filtres sont facultatifs ; `dateDebut` et `dateFin` vont ensemble (dates incluses).
+        Route au singulier : `/seance`.
+      operationId: listerSeances
+      parameters:
+        - name: id
+          in: query
+          description: Une seule séance, par son identifiant
+          schema: {type: integer, format: int64}
+        - name: photographeId
+          in: query
+          description: Séances d'un photographe
+          schema: {type: integer, format: int64}
+        - name: dateDebut
+          in: query
+          description: Première date de la période (AAAA-MM-JJ), à donner avec dateFin
+          schema: {type: string, format: date, example: '2026-11-16'}
+        - name: dateFin
+          in: query
+          description: Dernière date de la période (AAAA-MM-JJ), à donner avec dateDebut
+          schema: {type: string, format: date, example: '2026-11-22'}
+      responses:
+        '200':
+          description: Séances correspondant aux filtres (liste vide si aucune)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Seance'
+        '400':
+          description: Une seule des deux dates fournie, ou date mal formée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+              example:
+                status: 400
+                erreur: Bad Request
+                message: Les paramètres dateDebut et dateFin doivent être fournis ensemble.
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+
+  /seances/options:
+    get:
+      tags: [Séances]
+      summary: Listes des formulaires de séance
+      description: Types de séance, photographes actifs et clients, pour remplir les listes déroulantes.
+      operationId: optionsSeance
+      responses:
+        '200':
+          description: Les trois listes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptionsSeance'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+
+  /seances:
+    post:
+      tags: [Séances]
+      summary: Créer une séance
+      description: |
+        La séance est créée au statut PLANIFIEE. Le photographe doit être actif.
+        Tous les champs du corps sont envoyés sous forme de texte (ex. `"duree": "90"`).
+        La réponse contient les champs de la séance, sans son type, son photographe ni son client.
+      operationId: creerSeance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeanceCreation'
+      responses:
+        '200':
+          description: Séance créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Seance'
+        '400':
+          description: Champ manquant ou invalide, durée ou identifiant non positif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+              example:
+                status: 400
+                erreur: Bad Request
+                message: La durée et les identifiants doivent être positifs.
+        '409':
+          description: Séance non créée (photographe inactif ou référence inexistante)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+              example:
+                status: 409
+                erreur: Conflict
+                message: La séance n'a pas pu être créée. Vérifiez le photographe et les références sélectionnées.
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+
+  /seances/{id}:
+    parameters:
+      - $ref: '#/components/parameters/SeanceId'
+    put:
+      tags: [Séances]
+      summary: Modifier une séance
+      description: |
+        Remplace tous les champs de la séance. Un changement de statut doit respecter les
+        transitions autorisées (voir `PATCH /seances/{id}/statut`). Une séance TERMINEE ou
+        ANNULEE ne peut plus être modifiée. Champs envoyés sous forme de texte.
+      operationId: modifierSeance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeanceModification'
+      responses:
+        '200':
+          description: Séance modifiée, avec son type, son photographe et son client
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Seance'
+        '400':
+          description: Champ manquant ou invalide, ou transition de statut interdite
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+              example:
+                status: 400
+                erreur: Bad Request
+                message: Cette transition de statut n'est pas autorisée.
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '409':
+          description: Séance TERMINEE ou ANNULEE, donc non modifiable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+              example:
+                status: 409
+                erreur: Conflict
+                message: La séance n'a pas pu être mise à jour.
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+
+  /seances/{id}/statut:
+    parameters:
+      - $ref: '#/components/parameters/SeanceId'
+    patch:
+      tags: [Séances]
+      summary: Changer le statut d'une séance
+      description: |
+        Transitions autorisées : PLANIFIEE vers CONFIRMEE ou ANNULEE ; CONFIRMEE vers ANNULEE,
+        ou vers TERMINEE une fois l'heure de fin passée. TERMINEE et ANNULEE sont définitifs.
+      operationId: changerStatutSeance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [statut]
+              properties:
+                statut:
+                  $ref: '#/components/schemas/StatutSeance'
+            example:
+              statut: CONFIRMEE
+      responses:
+        '200':
+          description: Séance avec son nouveau statut
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Seance'
+        '400':
+          description: Statut absent ou inconnu, ou transition interdite
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+              example:
+                status: 400
+                erreur: Bad Request
+                message: Cette transition de statut n'est pas autorisée.
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '409':
+          description: La mise à jour n'a pas pu être enregistrée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+
   /seances/{id}/facture:
     post:
       tags: [Factures]
@@ -418,6 +630,85 @@ paths:
         '500':
           $ref: '#/components/responses/ErreurServeur'
 
+  /statistiques/photographes_par_seances:
+    get:
+      tags: [Statistiques]
+      summary: Top 5 des photographes par nombre de séances réalisées
+      description: |
+        Seules les séances TERMINEE comptent. Chaque ligne est un tableau `[nom, nombre]`,
+        trié par nombre décroissant puis par nom ; 5 lignes au plus.
+      operationId: topPhotographesParSeances
+      responses:
+        '200':
+          description: Classement
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 5
+                items:
+                  $ref: '#/components/schemas/LigneClassement'
+              example: [["Alice Martin", 3], ["Bruno Leroy", 2]]
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+
+  /statistiques/photographes_par_duree:
+    get:
+      tags: [Statistiques]
+      summary: Top 5 des photographes par durée cumulée des séances réalisées
+      description: |
+        Seules les séances TERMINEE comptent. Chaque ligne est un tableau `[nom, minutes]`,
+        trié par durée décroissante puis par nom ; 5 lignes au plus.
+      operationId: topPhotographesParDuree
+      responses:
+        '200':
+          description: Classement, durées en minutes
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 5
+                items:
+                  $ref: '#/components/schemas/LigneClassement'
+              example: [["Emma Petit", 660], ["Alice Martin", 570]]
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+
+  /statistiques/chiffre_affaires_pour_periode:
+    post:
+      tags: [Statistiques]
+      summary: Chiffre d'affaires sur une période
+      description: |
+        Somme des montants TTC des factures PAYEE dont la date d'émission est dans la période,
+        bornes incluses. 0 si aucune facture payée. La réponse est un nombre seul.
+      operationId: chiffreAffaires
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Periode'
+      responses:
+        '200':
+          description: Montant TTC en euros
+          content:
+            application/json:
+              schema:
+                type: number
+                example: 4104.00
+        '400':
+          description: Date manquante ou mal formée, ou date de début après la date de fin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+              example:
+                status: 400
+                erreur: Bad Request
+                message: La date de début (2026-12-31) doit précéder la date de fin (2026-01-01).
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+
 components:
   parameters:
     PhotographeId:
@@ -429,6 +720,15 @@ components:
         type: integer
         format: int64
         example: 1
+    SeanceId:
+      name: id
+      in: path
+      required: true
+      description: Identifiant de la séance
+      schema:
+        type: integer
+        format: int64
+        example: 13
     FactureId:
       name: id
       in: path
@@ -611,6 +911,99 @@ components:
               type: string
               example: '901234567'
 
+    StatutSeance:
+      type: string
+      enum: [PLANIFIEE, CONFIRMEE, TERMINEE, ANNULEE]
+    TypeSeance:
+      type: object
+      properties:
+        id: {type: integer, format: int64, example: 1}
+        libelle: {type: string, example: Portrait}
+        tarifHoraireHT: {type: number, example: 80.00}
+    Seance:
+      type: object
+      description: Séance photo. `typeSeance`, `photographe` et `client` sont absents de la réponse d'une création.
+      properties:
+        id: {type: integer, format: int64, example: 13}
+        date: {type: string, format: date, example: '2026-11-21'}
+        heureDebut: {type: string, example: '10:00:00'}
+        duree: {type: integer, description: Durée en minutes, example: 120}
+        lieu: {type: string, example: 'Studio du centre-ville, Lannion'}
+        statut:
+          $ref: '#/components/schemas/StatutSeance'
+        typeSeance:
+          $ref: '#/components/schemas/TypeSeance'
+        photographe:
+          $ref: '#/components/schemas/Photographe'
+        client:
+          $ref: '#/components/schemas/Client'
+    SeanceCreation:
+      type: object
+      description: Tous les champs sont des chaînes de caractères.
+      required: [date, heureDebut, duree, lieu, typeSeanceId, photographeId, clientId, clientType]
+      properties:
+        date: {type: string, format: date, example: '2026-11-25'}
+        heureDebut: {type: string, description: HH:MM:SS, example: '14:00:00'}
+        duree: {type: string, description: 'Durée en minutes, entier positif', example: '90'}
+        lieu: {type: string, example: Lannion}
+        typeSeanceId: {type: string, example: '1'}
+        photographeId: {type: string, example: '1'}
+        clientId: {type: string, example: '1'}
+        clientType:
+          type: string
+          enum: [PARTICULIER, ENTREPRISE]
+          example: PARTICULIER
+    SeanceModification:
+      description: Mêmes champs que la création, plus le statut.
+      allOf:
+        - $ref: '#/components/schemas/SeanceCreation'
+        - type: object
+          required: [statut]
+          properties:
+            statut:
+              $ref: '#/components/schemas/StatutSeance'
+    OptionsSeance:
+      type: object
+      properties:
+        typesSeance:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: integer, format: int64, example: 1}
+              libelle: {type: string, example: Portrait}
+        photographes:
+          type: array
+          description: Photographes actifs uniquement
+          items:
+            type: object
+            properties:
+              id: {type: integer, format: int64, example: 1}
+              nom: {type: string, example: Alice Martin}
+        clients:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: integer, format: int64, example: 5}
+              type:
+                $ref: '#/components/schemas/TypeClient'
+              designation: {type: string, description: « Prénom Nom » ou raison sociale, example: Agence Horizon Événements}
+    LigneClassement:
+      type: array
+      description: Une ligne de classement, `[nom du photographe, valeur]`.
+      minItems: 2
+      maxItems: 2
+      items:
+        oneOf:
+          - type: string
+          - type: integer
+    Periode:
+      type: object
+      required: [dateDebut, dateFin]
+      properties:
+        dateDebut: {type: string, format: date, example: '2026-01-01'}
+        dateFin: {type: string, format: date, example: '2026-12-31'}
     StatutPaiement:
       type: string
       enum: [EN_ATTENTE, PAYEE, ANNULEE]
