@@ -1,5 +1,20 @@
 # Studio photo
 
+| | |
+| --- | --- |
+| **Groupe** | JEEPhoto |
+| **Branche à jour** | `main` |
+| **Dépôt** | https://gitlab.enssat.fr/maubry/jeephoto |
+| **Livrables** | dossier [`livrables/`](livrables/) : jar, scripts SQL, contrat OpenAPI, rapport technique |
+
+| Lot | Périmètre | Membre |
+| --- | --- | --- |
+| Lot 1 | Photographes et spécialités | Maxime |
+| Lot 2 | Clients, planning, documentation Swagger | Kyllian |
+| Lot 3 | Séances et statuts | Pierre |
+| Lot 4 | Facturation et PDF | Pierrick |
+| Lot 5 | Statistiques et socle technique | Mathis |
+
 Application web de gestion d'un studio photo, réalisée dans le cadre du projet Java web IAI2 (ENSSAT).
 Elle couvre les photographes et leurs spécialités, les clients, les séances et le planning,
 la facturation (avec facture PDF) et des statistiques d'activité.

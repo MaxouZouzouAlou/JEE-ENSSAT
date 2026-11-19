@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 250" font-family="Helvetica, Arial, sans-serif" font-size="13">
+  <defs>
+    <marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a96a3"/></marker>
+  </defs>
+  <rect width="760" height="250" fill="#ffffff"/>
+  <text x="20" y="24" font-size="15" font-weight="bold" fill="#1f2933">Une séance ne se termine qu'après sa fin ; deux états sont définitifs</text>
+  <circle cx="40" cy="80" r="7" fill="#1f2933"/>
+  <g stroke-width="1.5">
+    <rect x="70" y="58" width="150" height="44" rx="22" fill="#e6eef6" stroke="#5b8db8"/>
+    <rect x="320" y="58" width="150" height="44" rx="22" fill="#e6eef6" stroke="#5b8db8"/>
+    <rect x="570" y="58" width="160" height="44" rx="22" fill="#e5f3ea" stroke="#2f7d4f" stroke-width="3"/>
+    <rect x="320" y="170" width="150" height="44" rx="22" fill="#f6e6e6" stroke="#b23b3b" stroke-width="3"/>
+  </g>
+  <g font-weight="bold" text-anchor="middle" fill="#1f2933">
+    <text x="145" y="85">PLANIFIEE</text><text x="395" y="85">CONFIRMEE</text>
+    <text x="650" y="85">TERMINEE</text><text x="395" y="197">ANNULEE</text>
+  </g>
+  <g stroke="#8a96a3" stroke-width="1.3" fill="none" marker-end="url(#f)">
+    <path d="M47 80 H68"/><path d="M220 80 H318"/><path d="M470 80 H568"/>
+    <path d="M395 102 V168"/><path d="M145 102 V192 H318"/>
+  </g>
+  <g font-size="11" fill="#616e7c">
+    <text x="62" y="50">création</text>
+    <text x="244" y="72">confirmer</text>
+    <text x="482" y="72">terminer, après la fin</text>
+    <text x="403" y="140">annuler</text>
+    <text x="155" y="150">annuler</text>
+    <text x="586" y="122">seule facturable</text>
+  </g>
+  <text x="20" y="240" font-size="11" fill="#616e7c">Bord épais : état définitif, la séance ne peut plus être modifiée. Toute autre transition est refusée par l'API (409).</text>
+</svg>
