@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 470" font-family="Helvetica, Arial, sans-serif" font-size="13">
+  <defs>
+    <marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a96a3"/></marker>
+  </defs>
+  <rect width="760" height="470" fill="#ffffff"/>
+  <text x="20" y="26" font-size="15" font-weight="bold" fill="#1f2933">Chaque requête traverse cinq couches, de la page à la base</text>
+  <g fill="#ffffff" stroke="#c9d1da" stroke-width="1.2">
+    <rect x="20" y="44" width="500" height="58" rx="8"/>
+    <rect x="20" y="132" width="500" height="58" rx="8"/>
+    <rect x="20" y="220" width="500" height="58" rx="8" fill="#e6eef6" stroke="#1f5f8b" stroke-width="2"/>
+    <rect x="20" y="308" width="500" height="58" rx="8"/>
+    <rect x="20" y="396" width="500" height="58" rx="8"/>
+    <rect x="570" y="200" width="170" height="98" rx="8"/>
+  </g>
+  <g fill="#1f2933">
+    <text x="36" y="68" font-weight="bold">Navigateur</text>
+    <text x="36" y="88" fill="#616e7c">Pages HTML et JavaScript ; api.js appelle l'API avec fetch</text>
+    <text x="36" y="156" font-weight="bold">Ressources REST (Jersey sur Grizzly)</text>
+    <text x="36" y="176" fill="#616e7c">Lisent la requête et renvoient le code HTTP ; aucune règle métier</text>
+    <text x="36" y="244" font-weight="bold">Services</text>
+    <text x="36" y="264" fill="#616e7c">Appliquent les règles métier ; lèvent les exceptions métier</text>
+    <text x="36" y="332" font-weight="bold">DAO JDBC</text>
+    <text x="36" y="352" fill="#616e7c">Requêtes SQL paramétrées ; connexions fournies par DBManager</text>
+    <text x="36" y="420" font-weight="bold">MySQL 8</text>
+    <text x="36" y="440" fill="#616e7c">7 tables ; contraintes UNIQUE, CHECK et clés étrangères</text>
+    <text x="584" y="224" font-weight="bold">ExceptionMapper</text>
+    <text x="584" y="244" fill="#616e7c">convertissent l'erreur</text>
+    <text x="584" y="260" fill="#616e7c">en JSON {status, erreur,</text>
+    <text x="584" y="276" fill="#616e7c">message} : 400 à 500</text>
+  </g>
+  <g stroke="#8a96a3" stroke-width="1.3" fill="none" marker-end="url(#f)">
+    <path d="M270 102 V130"/><path d="M270 190 V218"/><path d="M270 278 V306"/><path d="M270 366 V394"/>
+    <path d="M520 249 H568"/>
+    <path d="M655 200 V73 H524"/>
+  </g>
+  <g font-size="11" fill="#616e7c">
+    <text x="278" y="121">requête HTTP en JSON</text>
+    <text x="278" y="209">objets métier</text>
+    <text x="278" y="297">appels de DAO</text>
+    <text x="278" y="385">SQL paramétré</text>
+    <text x="526" y="242">erreur</text>
+    <text x="580" y="66">réponse JSON</text>
+  </g>
+</svg>
