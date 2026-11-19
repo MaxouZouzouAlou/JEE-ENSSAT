@@ -290,32 +290,19 @@ paths:
         '500':
           $ref: '#/components/responses/ErreurServeur'
 
-  /seance:
+  /seances:
     get:
       tags: [Séances]
       summary: Consulter le planning des séances
       description: |
         Séances triées par date puis par heure, avec leur type, leur photographe et leur client.
         Tous les filtres sont facultatifs ; `dateDebut` et `dateFin` vont ensemble (dates incluses).
-        Route au singulier : `/seance`.
       operationId: listerSeances
       parameters:
-        - name: id
-          in: query
-          description: Une seule séance, par son identifiant
-          schema: {type: integer, format: int64}
-        - name: photographeId
-          in: query
-          description: Séances d'un photographe
-          schema: {type: integer, format: int64}
-        - name: dateDebut
-          in: query
-          description: Première date de la période (AAAA-MM-JJ), à donner avec dateFin
-          schema: {type: string, format: date, example: '2026-11-16'}
-        - name: dateFin
-          in: query
-          description: Dernière date de la période (AAAA-MM-JJ), à donner avec dateDebut
-          schema: {type: string, format: date, example: '2026-11-22'}
+        - $ref: '#/components/parameters/FiltreSeanceId'
+        - $ref: '#/components/parameters/FiltrePhotographeId'
+        - $ref: '#/components/parameters/FiltreDateDebut'
+        - $ref: '#/components/parameters/FiltreDateFin'
       responses:
         '200':
           description: Séances correspondant aux filtres (liste vide si aucune)
@@ -326,7 +313,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Seance'
         '400':
-          description: Une seule des deux dates fournie, ou date mal formée
+          description: Une seule des deux dates fournie, date mal formée, ou début après la fin
           content:
             application/json:
               schema:
@@ -337,6 +324,73 @@ paths:
                 message: Les paramètres dateDebut et dateFin doivent être fournis ensemble.
         '500':
           $ref: '#/components/responses/ErreurServeur'
+    post:
+      tags: [Séances]
+      summary: Créer une séance
+      description: |
+        La séance est créée au statut PLANIFIEE. Règles : début dans le futur ; photographe actif ;
+        type et client existants ; aucun chevauchement avec une autre séance non annulée du même
+        photographe (des séances bout à bout sont acceptées). Les champs du corps sont des chaînes.
+      operationId: creerSeance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeanceCreation'
+      responses:
+        '201':
+          description: Séance créée, renvoyée complète (en-tête Location vers la séance)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Seance'
+        '400':
+          description: Champ manquant ou invalide, type ou client inconnu, ou séance dans le passé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+              example:
+                status: 400
+                erreur: Bad Request
+                message: Impossible de planifier une séance dans le passé (18/11/2026 à 14h00).
+        '409':
+          description: Photographe inactif, ou photographe déjà pris sur ce créneau
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+              example:
+                status: 409
+                erreur: Conflict
+                message: Le photographe a déjà une séance sur ce créneau (20/11/2026, 15h00 – 17h00).
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+
+  /seance:
+    get:
+      tags: [Séances]
+      deprecated: true
+      summary: Planning (ancienne route)
+      description: Même réponse que `GET /seances`, gardée pour compatibilité. Utiliser `GET /seances`.
+      operationId: listerSeancesAncienneRoute
+      parameters:
+        - $ref: '#/components/parameters/FiltreSeanceId'
+        - $ref: '#/components/parameters/FiltrePhotographeId'
+        - $ref: '#/components/parameters/FiltreDateDebut'
+        - $ref: '#/components/parameters/FiltreDateFin'
+      responses:
+        '200':
+          description: Séances correspondant aux filtres
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Seance'
+        '400':
+          $ref: '#/components/responses/DonneesInvalides'
 
   /seances/options:
     get:
@@ -354,61 +408,32 @@ paths:
         '500':
           $ref: '#/components/responses/ErreurServeur'
 
-  /seances:
-    post:
+  /seances/{id}:
+    parameters:
+      - $ref: '#/components/parameters/SeanceId'
+    get:
       tags: [Séances]
-      summary: Créer une séance
-      description: |
-        La séance est créée au statut PLANIFIEE. Le photographe doit être actif.
-        Tous les champs du corps sont envoyés sous forme de texte (ex. `"duree": "90"`).
-        La réponse contient les champs de la séance, sans son type, son photographe ni son client.
-      operationId: creerSeance
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SeanceCreation'
+      summary: Détail d'une séance
+      operationId: trouverSeance
       responses:
         '200':
-          description: Séance créée
+          description: Séance avec son type, son photographe et son client
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Seance'
-        '400':
-          description: Champ manquant ou invalide, durée ou identifiant non positif
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Erreur'
-              example:
-                status: 400
-                erreur: Bad Request
-                message: La durée et les identifiants doivent être positifs.
-        '409':
-          description: Séance non créée (photographe inactif ou référence inexistante)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Erreur'
-              example:
-                status: 409
-                erreur: Conflict
-                message: La séance n'a pas pu être créée. Vérifiez le photographe et les références sélectionnées.
+        '404':
+          $ref: '#/components/responses/Introuvable'
         '500':
           $ref: '#/components/responses/ErreurServeur'
-
-  /seances/{id}:
-    parameters:
-      - $ref: '#/components/parameters/SeanceId'
     put:
       tags: [Séances]
       summary: Modifier une séance
       description: |
-        Remplace tous les champs de la séance. Un changement de statut doit respecter les
-        transitions autorisées (voir `PATCH /seances/{id}/statut`). Une séance TERMINEE ou
-        ANNULEE ne peut plus être modifiée. Champs envoyés sous forme de texte.
+        Remplace tous les champs. Refusé pour une séance TERMINEE ou ANNULEE. Si la date ou l'heure
+        change, le nouveau début doit être dans le futur ; si le créneau ou le photographe change,
+        le photographe doit être actif et libre (la séance elle-même est exclue du contrôle).
+        Un changement de statut suit les mêmes transitions que `PATCH /seances/{id}/statut`.
       operationId: modifierSeance
       requestBody:
         required: true
@@ -418,25 +443,21 @@ paths:
               $ref: '#/components/schemas/SeanceModification'
       responses:
         '200':
-          description: Séance modifiée, avec son type, son photographe et son client
+          description: Séance modifiée, renvoyée complète
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Seance'
         '400':
-          description: Champ manquant ou invalide, ou transition de statut interdite
+          description: Champ manquant ou invalide, type ou client inconnu, ou nouveau créneau dans le passé
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Erreur'
-              example:
-                status: 400
-                erreur: Bad Request
-                message: Cette transition de statut n'est pas autorisée.
         '404':
           $ref: '#/components/responses/Introuvable'
         '409':
-          description: Séance TERMINEE ou ANNULEE, donc non modifiable
+          description: Séance terminée ou annulée, transition interdite, photographe inactif ou déjà pris
           content:
             application/json:
               schema:
@@ -444,7 +465,29 @@ paths:
               example:
                 status: 409
                 erreur: Conflict
-                message: La séance n'a pas pu être mise à jour.
+                message: Une séance terminée ne peut plus être modifiée.
+        '500':
+          $ref: '#/components/responses/ErreurServeur'
+    delete:
+      tags: [Séances]
+      summary: Supprimer une séance
+      description: Refusé si la séance a une facture, qui doit rester rattachée à sa prestation.
+      operationId: supprimerSeance
+      responses:
+        '204':
+          description: Séance supprimée
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '409':
+          description: La séance a une facture
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+              example:
+                status: 409
+                erreur: Conflict
+                message: 'La séance 1 a une facture : elle ne peut pas être supprimée.'
         '500':
           $ref: '#/components/responses/ErreurServeur'
 
@@ -478,23 +521,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/Seance'
         '400':
-          description: Statut absent ou inconnu, ou transition interdite
+          description: Statut absent ou inconnu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '409':
+          description: Transition interdite, ou séance pas encore finie
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Erreur'
               example:
-                status: 400
-                erreur: Bad Request
-                message: Cette transition de statut n'est pas autorisée.
-        '404':
-          $ref: '#/components/responses/Introuvable'
-        '409':
-          description: La mise à jour n'a pas pu être enregistrée
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Erreur'
+                status: 409
+                erreur: Conflict
+                message: La séance ne pourra être terminée qu'après sa fin, le 20/11/2026 à 16h00.
         '500':
           $ref: '#/components/responses/ErreurServeur'
 
@@ -720,6 +763,26 @@ components:
         type: integer
         format: int64
         example: 1
+    FiltreSeanceId:
+      name: id
+      in: query
+      description: Une seule séance, par son identifiant
+      schema: {type: integer, format: int64}
+    FiltrePhotographeId:
+      name: photographeId
+      in: query
+      description: Séances d'un photographe
+      schema: {type: integer, format: int64}
+    FiltreDateDebut:
+      name: dateDebut
+      in: query
+      description: Première date de la période (AAAA-MM-JJ), à donner avec dateFin
+      schema: {type: string, format: date, example: '2026-11-16'}
+    FiltreDateFin:
+      name: dateFin
+      in: query
+      description: Dernière date de la période (AAAA-MM-JJ), à donner avec dateDebut
+      schema: {type: string, format: date, example: '2026-11-22'}
     SeanceId:
       name: id
       in: path
@@ -922,7 +985,7 @@ components:
         tarifHoraireHT: {type: number, example: 80.00}
     Seance:
       type: object
-      description: Séance photo. `typeSeance`, `photographe` et `client` sont absents de la réponse d'une création.
+      description: Séance photo, avec son type, son photographe et son client.
       properties:
         id: {type: integer, format: int64, example: 13}
         date: {type: string, format: date, example: '2026-11-21'}
@@ -940,7 +1003,7 @@ components:
     SeanceCreation:
       type: object
       description: Tous les champs sont des chaînes de caractères.
-      required: [date, heureDebut, duree, lieu, typeSeanceId, photographeId, clientId, clientType]
+      required: [date, heureDebut, duree, lieu, typeSeanceId, photographeId, clientId]
       properties:
         date: {type: string, format: date, example: '2026-11-25'}
         heureDebut: {type: string, description: HH:MM:SS, example: '14:00:00'}
@@ -951,6 +1014,7 @@ components:
         clientId: {type: string, example: '1'}
         clientType:
           type: string
+          description: Facultatif ; le type enregistré du client est utilisé
           enum: [PARTICULIER, ENTREPRISE]
           example: PARTICULIER
     SeanceModification:

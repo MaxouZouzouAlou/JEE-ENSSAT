@@ -17,12 +17,32 @@ public class DBManager {
 		properties = ResourceBundle.getBundle(resourceBundle);
 
 		try {
-			Class.forName(properties.getString("database.driver"));
+			Class.forName(parametre("database.driver"));
 		} catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
+	}
+
+	/**
+	 * Valeur d'un paramètre de connexion, par ordre de priorité :
+	 * <ol>
+	 *   <li>propriété système, ex. {@code java -Ddatabase.password=... -jar studiophoto.jar} ;</li>
+	 *   <li>variable d'environnement, nom en majuscules avec {@code _} : {@code DATABASE_PASSWORD} ;</li>
+	 *   <li>{@code application.properties}.</li>
+	 * </ol>
+	 * Le mot de passe peut ainsi être fourni au lancement plutôt que versionné dans le dépôt.
+	 */
+	private String parametre(String cle) {
+		String valeur = System.getProperty(cle);
+		if (valeur == null || valeur.isBlank()) {
+			valeur = System.getenv(cle.toUpperCase().replace('.', '_'));
+		}
+		if (valeur == null || valeur.isBlank()) {
+			valeur = properties.containsKey(cle) ? properties.getString(cle) : null;
+		}
+		return valeur;
 	}
 
 	public static DBManager getInstance() {
@@ -38,8 +58,8 @@ public class DBManager {
 
 		Connection connection = null;
 		try {
-			connection = DriverManager.getConnection(properties.getString("database.url"), properties.getString("database.login"),
-					properties.getString("database.password"));
+			connection = DriverManager.getConnection(parametre("database.url"), parametre("database.login"),
+					parametre("database.password"));
 
 		} catch (SQLException sqle) {
 			sqle.printStackTrace();

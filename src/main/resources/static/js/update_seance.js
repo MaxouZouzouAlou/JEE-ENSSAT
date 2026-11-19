@@ -10,7 +10,7 @@ async function chargerFormulaireSeance() {
     }
 
     try {
-        const seances = await api.get('/seance');
+        const seances = await api.get('/seances');
         const seance = seances.find(element => String(element.id) === seanceId);
         if (!seance) {
             afficherErreur('Séance introuvable.');

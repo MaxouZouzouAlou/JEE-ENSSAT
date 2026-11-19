@@ -15,7 +15,7 @@
 function urlSeances(debut, fin, photographeId) {
     const parametres = new URLSearchParams({ dateDebut: debut, dateFin: fin });
     if (photographeId) parametres.set('photographeId', photographeId);
-    return '/seance?' + parametres;
+    return '/seances?' + parametres;
 }
 
 const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
@@ -41,8 +41,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('date').addEventListener('change', e => {
         if (e.target.value) changer({ date: depuisIso(e.target.value) });
     });
-    document.getElementById('filtre-photographe').addEventListener('change', e =>
-        changer({ photographe: e.target.value }));
+    const filtre = document.getElementById('filtre-photographe');
+    filtre.addEventListener('change', e => changer({ photographe: e.target.value }));
+    const profil = lireProfil();
+    if (profil && profil.role === 'PHOTOGRAPHE') {
+        filtre.disabled = true;   // filtre figé sur le photographe du profil
+        document.querySelector('h1').textContent = 'Mon planning';
+        const creation = document.querySelector('a[href="create_seance.html"]');
+        if (creation) creation.hidden = true;   // la création de séance est réservée au secrétariat
+    }
     // Clic sur l'en-tête d'un jour de la semaine -> vue de ce jour
     document.getElementById('calendrier').addEventListener('click', e => {
         const bouton = e.target.closest('button[data-jour]');
@@ -64,6 +71,11 @@ function lireUrl() {
     etat.vue = vue === 'jour' ? 'jour' : 'semaine';
     etat.date = /^\d{4}-\d{2}-\d{2}$/.test(date || '') ? depuisIso(date) : new Date();
     etat.photographe = lireParametre('photographe') || '';
+    // un photographe ne voit que son propre planning, quel que soit le paramètre de l'URL
+    const profil = lireProfil();
+    if (profil && profil.role === 'PHOTOGRAPHE') {
+        etat.photographe = String(profil.photographeId);
+    }
 }
 
 function changer(modifications) {
@@ -232,7 +244,12 @@ function carteSeance(seance) {
     const type = seance.typeSeance ? seance.typeSeance.libelle : '';
     const photographe = seance.photographe ? seance.photographe.nom : '';
     const titre = [type, designationClient(seance.client), photographe, seance.lieu].filter(Boolean).join(' · ');
-    return '<a class="seance ' + echapperHtml(seance.statut) + '" href="update_seance.html?id=' + encodeURIComponent(seance.id) + '"'
+    // un photographe consulte son planning sans pouvoir modifier : la séance n'est pas un lien
+    const lectureSeule = estPhotographe();
+    const ouverture = lectureSeule
+        ? '<div class="seance ' + echapperHtml(seance.statut) + '"'
+        : '<a class="seance ' + echapperHtml(seance.statut) + '" href="update_seance.html?id=' + encodeURIComponent(seance.id) + '"';
+    return ouverture
         + ' title="' + echapperHtml(titre) + '">'
         + '<div class="horaire">' + plageHoraire(seance) + '</div>'
         + '<div class="statut">' + badgeStatut(seance.statut) + '</div>'
@@ -241,5 +258,10 @@ function carteSeance(seance) {
         + '<div class="detail">Photographe : ' + echapperHtml(photographe) + '</div>'
         + '<div class="detail">Lieu : ' + echapperHtml(seance.lieu) + '</div>'
         + '</div>'
-        + '</a>';
+        + (lectureSeule ? '</div>' : '</a>');
+}
+
+function estPhotographe() {
+    const profil = lireProfil();
+    return Boolean(profil && profil.role === 'PHOTOGRAPHE');
 }
