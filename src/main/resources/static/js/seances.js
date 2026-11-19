@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function chargerSeances() {
     const corpsTableau = document.getElementById('liste-seances');
     try {
-        const seances = await api.get('/seance');
+        const [seances, facturesParSeance] = await Promise.all([api.get('/seance'), chargerFacturesParSeance()]);
         if (seances.length === 0) {
             corpsTableau.innerHTML = '<tr><td colspan="7">Aucune séance à afficher.</td></tr>';
             return;
@@ -28,7 +28,7 @@ async function chargerSeances() {
                 <td>${echapperHtml(formaterDuree(seance.duree))}</td>
                 <td>${echapperHtml(seance.lieu)}</td>
                 <td>${badgeStatut(seance.statut)}</td>
-                <td><a class="bouton-lien" href="seance.html?id=${encodeURIComponent(seance.id)}">Détail</a> <a class="bouton-lien secondaire" href="update_seance.html?id=${encodeURIComponent(seance.id)}">Modifier</a> ${htmlBoutonFacture(seance)}</td>
+                <td><a class="bouton-lien" href="seance.html?id=${encodeURIComponent(seance.id)}">Détail</a> <a class="bouton-lien secondaire" href="update_seance.html?id=${encodeURIComponent(seance.id)}">Modifier</a> ${htmlBoutonFacture(seance, facturesParSeance)}</td>
             </tr>
         `).join('');
     } catch (e) {

@@ -3,17 +3,34 @@
 
    Pour mettre le bouton "Générer la facture" sur la fiche d'une séance :
      1. inclure js/facturation.js dans seances.html
-     2. mettre htmlBoutonFacture(seance) dans le html de la fiche (vide si la séance n'est pas TERMINEE)
+     2. charger la liste avec chargerFacturesParSeance(), puis mettre htmlBoutonFacture(seance, liste) dans le
+        html de la fiche (vide si la séance n'est pas TERMINEE, "Voir la facture" si elle est déjà facturée)
      3. appeler activerBoutonsFacture(conteneur) une seule fois sur le conteneur de la fiche
      4. après un passage à TERMINEE, appeler proposerFacture(seance) pour proposer la facture tout de suite
 
    Dépend de js/api.js (api, afficherSucces, echapperHtml).
    ===================================================================== */
 
-// bouton "Générer la facture", seulement si la séance est TERMINEE
-function htmlBoutonFacture(seance) {
+// séance -> id de sa facture, pour savoir lesquelles sont déjà facturées (une seule requête pour toute la liste)
+async function chargerFacturesParSeance() {
+    const parSeance = new Map();
+    try {
+        const factures = await api.get('/factures');
+        factures.forEach(f => parSeance.set(f.seanceId, f.id));
+    } catch (e) {
+        // erreur déjà affichée par api.js ; sans la liste on propose le bouton, le serveur refusera si besoin
+    }
+    return parSeance;
+}
+
+// séance TERMINEE seulement : "Voir la facture" si elle en a déjà une, sinon "Générer la facture"
+function htmlBoutonFacture(seance, facturesParSeance) {
     if (!seance || seance.statut !== 'TERMINEE') {
         return '';
+    }
+    const factureId = facturesParSeance && facturesParSeance.get(seance.id);
+    if (factureId) {
+        return '<a class="bouton-lien secondaire" href="factures.html?id=' + Number(factureId) + '">Voir la facture</a>';
     }
     return '<button type="button" data-action="generer-facture" data-seance-id="'
         + echapperHtml(seance.id) + '">Générer la facture</button>';

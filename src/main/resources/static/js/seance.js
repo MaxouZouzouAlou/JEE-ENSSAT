@@ -25,8 +25,9 @@ const MESSAGES = {
     ANNULEE: 'Séance annulée.'
 };
 
-// séance affichée (null tant qu'elle n'est pas chargée)
+// séance affichée (null tant qu'elle n'est pas chargée) et factures déjà émises par séance
 let seance = null;
+let facturesParSeance = new Map();
 
 document.addEventListener('DOMContentLoaded', () => {
     const fiche = document.getElementById('fiche');
@@ -52,6 +53,7 @@ async function chargerSeance() {
             afficherErreur('Séance introuvable.');
             return;
         }
+        facturesParSeance = await chargerFacturesParSeance();
         afficherFiche();
     } catch (e) {
         // api.get affiche déjà le message d'erreur dans #messages.
@@ -89,9 +91,9 @@ function afficherFiche() {
 function htmlActions() {
     const cibles = TRANSITIONS[seance.statut] || [];
     if (cibles.length === 0) {
-        // séance TERMINEE : on laisse la facture, ANNULEE : rien à faire
+        // séance TERMINEE : sa facture, ANNULEE : rien à faire
         return seance.statut === 'TERMINEE'
-            ? htmlBoutonFacture(seance)
+            ? htmlBoutonFacture(seance, facturesParSeance)
             : '<span class="aide">Une séance annulée ne peut plus être modifiée.</span>';
     }
     let html = cibles.map(cible => {
