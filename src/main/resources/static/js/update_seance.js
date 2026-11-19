@@ -84,6 +84,10 @@ async function enregistrerSeance(evenement) {
 
     try {
         await api.put('/seances/' + encodeURIComponent(seanceId), donnees);
+        // séance passée à TERMINEE : on propose la facture (si acceptée, la page de la facture s'ouvre)
+        if (donnees.statut === 'TERMINEE' && proposerFacture({ id: seanceId, statut: 'TERMINEE' })) {
+            return;
+        }
         window.location.href = 'seances.html';
     } catch (e) {
         // api.put affiche déjà le message d'erreur dans #messages.

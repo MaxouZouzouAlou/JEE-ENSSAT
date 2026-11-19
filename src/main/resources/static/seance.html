@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-cache">
+    <title>Fiche séance – Studio photo</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* .carte force le display, sans cette règle le [hidden] ne marche plus */
+        #fiche[hidden] { display: none; }
+        .fiche-tete { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; }
+        .fiche-tete h2 { margin: 0; }
+        #fiche p { margin: 4px 0; }
+        .aide { color: var(--texte-doux); font-size: 13px; }
+    </style>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/facturation.js"></script>
+    <script src="js/seance.js"></script>
+</head>
+<body data-rubrique="seances.html">
+<header id="entete"></header>
+
+<main>
+    <div id="messages"></div>
+
+    <h1>Fiche séance</h1>
+    <p><a class="bouton-lien secondaire" href="seances.html">Retour aux séances</a></p>
+
+    <section id="fiche" class="carte" hidden aria-live="polite"></section>
+</main>
+</body>
+</html>
