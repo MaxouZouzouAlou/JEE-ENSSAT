@@ -1,6 +1,6 @@
 # Studio photo – Rapport technique
 
-Projet de développement Java web – IAI2 2026-2027 – ENSSAT
+Projet de développement Java web – IAI2 2026-2027 – ENSSAT · Groupe JEEPhoto : Maxime, Kyllian, Pierre, Pierrick, Mathis
 
 ## 1. Introduction
 
@@ -298,11 +298,11 @@ Le travail a suivi trois phases : un socle commun fait ensemble, cinq lots verti
 
 | Lot | Périmètre | Responsable |
 | --- | --- | --- |
-| Lot 1 | Photographes et spécialités | [nom] |
-| Lot 2 | Clients, planning, documentation Swagger | [nom] |
-| Lot 3 | Séances et statuts | [nom] |
-| Lot 4 | Facturation et PDF | [nom] |
-| Lot 5 | Statistiques et socle technique | [nom] |
+| Lot 1 | Photographes et spécialités | Maxime |
+| Lot 2 | Clients, planning, documentation Swagger | Kyllian |
+| Lot 3 | Séances et statuts | Pierre |
+| Lot 4 | Facturation et PDF | Pierrick |
+| Lot 5 | Statistiques et socle technique | Mathis |
 
 **Phase 0, le socle commun.** Elle a figé ce que tous les lots partagent, pour que personne n'attende personne : schéma SQL, script de données de test, classes du modèle, format d'erreur, contrat d'API et squelette du front (menu, style, `api.js`). Un lot qui dépend d'un autre teste avec les données de test au lieu d'attendre son code.
 
@@ -370,7 +370,7 @@ Toutes les fonctionnalités demandées par le sujet sont implémentées, avec le
 | Statistiques : deux top 5 et chiffre d'affaires sur une période | Fait | Calculs faits en SQL |
 | API REST : méthodes, codes, ressources, erreurs | Fait | Format d'erreur commun ; écarts listés ci-dessous |
 | Tests unitaires de la couche service, règles métier principales | Fait | 151 tests, 0 échec |
-| Livrables : jar, scripts SQL, Swagger, procédure d'installation, rapport | Fait | `studiophoto.jar`, dossier `sql/`, `/swagger/`, `README.md`, ce document |
+| Livrables : jar, scripts SQL, Swagger, procédure d'installation, rapport | Fait | Rassemblés dans `livrables/` ; procédure dans `README.md` |
 
 **Limites connues.** Quelques points s'écartent de nos propres conventions et seraient les premiers à reprendre :
 
