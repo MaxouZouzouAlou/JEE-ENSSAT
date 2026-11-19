@@ -28,7 +28,7 @@ async function chargerSeances() {
                 <td>${echapperHtml(formaterDuree(seance.duree))}</td>
                 <td>${echapperHtml(seance.lieu)}</td>
                 <td>${badgeStatut(seance.statut)}</td>
-                <td><a class="bouton-lien" href="update_seance.html?id=${encodeURIComponent(seance.id)}">Modifier</a> ${htmlBoutonFacture(seance)}</td>
+                <td><a class="bouton-lien" href="seance.html?id=${encodeURIComponent(seance.id)}">Détail</a> <a class="bouton-lien secondaire" href="update_seance.html?id=${encodeURIComponent(seance.id)}">Modifier</a> ${htmlBoutonFacture(seance)}</td>
             </tr>
         `).join('');
     } catch (e) {
