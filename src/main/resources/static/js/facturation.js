@@ -5,6 +5,7 @@
      1. inclure js/facturation.js dans seances.html
      2. mettre htmlBoutonFacture(seance) dans le html de la fiche (vide si la séance n'est pas TERMINEE)
      3. appeler activerBoutonsFacture(conteneur) une seule fois sur le conteneur de la fiche
+     4. après un passage à TERMINEE, appeler proposerFacture(seance) pour proposer la facture tout de suite
 
    Dépend de js/api.js (api, afficherSucces, echapperHtml).
    ===================================================================== */
@@ -39,4 +40,18 @@ async function genererFacture(seanceId, bouton) {
     } catch (e) {
         if (bouton) bouton.disabled = false;
     }
+}
+
+// à appeler juste après le passage d'une séance à TERMINEE : propose de générer la facture.
+// Renvoie true si la secrétaire accepte (genererFacture ouvre alors la facture), false sinon
+// (elle pourra toujours utiliser le bouton "Générer la facture" plus tard).
+function proposerFacture(seance) {
+    if (!seance || seance.statut !== 'TERMINEE') {
+        return false;
+    }
+    if (!window.confirm('La séance est terminée. Générer la facture maintenant ?')) {
+        return false;
+    }
+    genererFacture(Number(seance.id), null);
+    return true;
 }
