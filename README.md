@@ -1,14 +1,46 @@
-# Commandes du projet Studio photo
+# Studio photo
+
+Application web de gestion d'un studio photo, réalisée dans le cadre du projet Java web IAI2 (ENSSAT).
+Elle couvre les photographes et leurs spécialités, les clients, les séances et le planning,
+la facturation (avec facture PDF) et des statistiques d'activité.
+
+- **Back** : Java 25, API REST Jakarta (Jersey) sur un serveur Grizzly embarqué, JSON-B, JDBC + MySQL 8, OpenPDF.
+- **Front** : pages HTML / CSS / JavaScript sans framework, servies par la même application et appelant l'API.
+- **Tests** : JUnit 5 et Mockito.
 
 Toutes les commandes se lancent depuis le dossier `jeephoto` (la racine du projet).
 
+### Organisation du code
+
+```text
+src/main/java/fr/enssat/studiophoto/
+├── Main.java          démarrage du serveur (API sous /api, front sous /)
+├── DBManager.java     connexion à la base
+├── resource/          ressources REST (routes HTTP)
+├── service/           règles métier
+├── dao/               accès à la base (JDBC)
+├── model/             entités et énumérations
+├── dto/               objets échangés avec le front
+└── exception/         exceptions métier et conversion en réponses JSON
+src/main/resources/
+├── application.properties   paramètres du serveur et de la base
+└── static/                  front (HTML, css/, js/), openapi.yaml, swagger/
+src/test/java/               tests unitaires
+sql/                         scripts de création de la base et données de test
+```
+
 ## 1. Prérequis
+
+Pour compiler et lancer depuis les sources :
 
 ```bash
 java -version      # Java 25 (version utilisée dans le pom.xml)
 mvn -version       # Maven
 mysql --version    # client MySQL (pour les scripts SQL)
 ```
+
+Pour lancer seulement le jar livré, Java 25 suffit (ni Maven ni les sources).
+Dans tous les cas, la machine doit pouvoir joindre le serveur MySQL `vps817240.ovh.net` sur le port 3306.
 
 ## 2. Base de données
 
@@ -86,6 +118,9 @@ Attendre le message « Application démarrée. (Faites CTRL+C pour arrêter) »,
 | API REST | http://localhost:8080/api/... (ex. `/api/photographes`) |
 | Documentation de l'API (Swagger UI) | http://localhost:8080/swagger/ |
 
+Le port et l'adresse se règlent dans `src/main/resources/application.properties` (`server.base.uri`,
+`http://localhost:8080` par défaut). Ce fichier est inclus dans le jar : après l'avoir modifié, reconstruire le jar.
+
 La documentation est générée à partir de `src/main/resources/static/openapi.yaml` : à mettre à jour quand une route est ajoutée ou modifiée.
 
 `CTRL+C` arrête le serveur.
@@ -95,16 +130,35 @@ Après une modification :
 - code Java : arrêter le serveur (`CTRL+C`) puis relancer `mvn compile exec:java` ;
 - HTML / CSS / JS : relancer aussi, car les fichiers sont recopiés dans `target/` à la compilation.
 
+### Choisir son profil sur le site
+
+Au premier affichage, la page d'accueil demande « Qui êtes-vous ? ». Le profil choisi détermine les rubriques
+affichées dans le menu. Il n'y a pas de mot de passe : ce n'est pas une authentification, seulement un choix
+d'affichage, conservé dans le navigateur.
+
+| Profil | Rubriques accessibles |
+| --- | --- |
+| Gestionnaire | toutes : photographes, clients, séances, planning, factures, statistiques |
+| Secrétaire | clients, séances, planning, factures |
+| Photographe | son planning uniquement (il choisit son nom dans la liste des photographes actifs) |
+
+Une page non autorisée renvoie vers l'accueil du profil. Le bouton « Changer de profil », en haut à droite,
+permet d'en choisir un autre.
+
 ### Tester l'API en ligne de commande
 
 ```bash
 curl http://localhost:8080/api/photographes
+curl http://localhost:8080/api/seances
+curl "http://localhost:8080/api/seances?photographeId=1&dateDebut=2027-01-01&dateFin=2027-01-31"
 curl -X POST http://localhost:8080/api/clients -H "Content-Type: application/json" -d '{"type":"PARTICULIER","nom":"Bernard","prenom":"Julie","adressePostale":"12 rue des Lilas, 22300 Lannion","email":"julie@mail.example"}'
-curl -X POST http://localhost:8080/api/seances -H "Content-Type: application/json" -d '{"date":"2026-11-18","heureDebut":"14:00:00","duree":"90","lieu":"Lannion","typeSeanceId":"1","photographeId":"1","clientId":"1","clientType":"PARTICULIER"}'
+curl -X POST http://localhost:8080/api/seances -H "Content-Type: application/json" -d '{"date":"2027-01-15","heureDebut":"14:00:00","duree":"90","lieu":"Lannion","typeSeanceId":"1","photographeId":"1","clientId":"1","clientType":"PARTICULIER"}'
 curl -X PATCH http://localhost:8080/api/seances/13/statut -H "Content-Type: application/json" -d '{"statut":"CONFIRMEE"}'
 ```
 
 Pour créer une séance, remplacer les identifiants par ceux de types, photographes actifs et clients présents en base.
+La date doit être dans le futur (une séance ne peut pas être planifiée dans le passé) et le photographe libre sur ce créneau.
+Les erreurs sont renvoyées en JSON : `{"status": 409, "erreur": "Conflict", "message": "..."}`.
 
 ### Lancer le jar exécutable (livrable)
 
@@ -128,7 +182,7 @@ Même principe pour `database.url` (`DATABASE_URL`) et `database.login` (`DATABA
 
 ```bash
 mvn clean compile   # recompiler depuis zéro
-mvn test            # lancer les tests unitaires
+mvn test            # lancer les tests unitaires (sans accès à la base)
 mvn package         # construire le jar exécutable target/studiophoto.jar
 ```
 
